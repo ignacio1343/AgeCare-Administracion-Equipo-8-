@@ -26,9 +26,16 @@ Tecnologías utilizadas:
   Seguridad: Autenticación JWT y Azure Key Vault para la gestión de secretos.
   Observabilidad: Application Insights para visualización de métricas de rendimiento y errores.
 
-Metodología de trabajo del equipo: Metodologia Agil Scrum
+Metodología de trabajo del equipo: Metodologia Agil Scrum, la planificación inicial exige el cierre definitivo de
+la Carta Gantt de manera estricta antes de la definición de la Matriz RACI y el Cuadro de Costos, para garantizar
+la integridad temporal y financiera del proyecto.
+
+Arquitectura de la solución: Arquitectura cliente-servidor donde el frontend (React) consume endpoints administrativos
+dedicados (FastAPI) expuestos bajo la ruta /admin/v1. La persistencia se maneja en PostgreSQL con un modelo multi-rol (RBAC).
+Todo el sistema está containerizado con Docker para asegurar portabilidad entre el entorno local y la nube.
+
 
 _______________________________________________ Proximo a desarrollar ____________________________________________________________
 
 Instrucciones para ejecutar el proyecto localmente
-Arquitectura de la solución (descripción o diagrama)
+
