@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import errors
 from .config import get_settings
-
+from .routers import auth, staff
 
 API = "/api/v1"
 
@@ -18,7 +18,8 @@ errors.install(app)
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().cors_list, allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 
-# Los routers de cada módulo se registran aquí a medida que se integran.
+for r in (auth.router, staff.router,):
+    app.include_router(r, prefix=API)
 
 
 @app.get(f"{API}/health", tags=["Sistema"])

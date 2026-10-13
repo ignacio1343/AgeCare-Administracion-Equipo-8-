@@ -22,8 +22,8 @@ export const MODULOS: { grupo: string; items: { to: string; label: string; ico: 
   {
     grupo: 'Sistema', items: [
       { to: '/configuracion', label: 'Configuración y legales', ico: '⚙️', permiso: 'configuracion', listo: false },
-      { to: '/staff', label: 'Staff y roles', ico: '🔑', permiso: 'staff', listo: false },
-      { to: '/auditoria', label: 'Auditoría', ico: '📜', permiso: 'staff', listo: false },
+      { to: '/staff', label: 'Staff y roles', ico: '🔑', permiso: 'staff', listo: true },
+      { to: '/auditoria', label: 'Auditoría', ico: '📜', permiso: 'staff', listo: true },
     ],
   },
 ]
