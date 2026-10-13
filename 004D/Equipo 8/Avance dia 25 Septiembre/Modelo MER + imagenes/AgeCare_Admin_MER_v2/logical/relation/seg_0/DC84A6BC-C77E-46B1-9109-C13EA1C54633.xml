@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R02_ROL_STAFF_PERMISO_ROL" directorySegmentName="seg_0" id="DC84A6BC-C77E-46B1-9109-C13EA1C54633">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>87B97891-B415-4CB1-8998-5635CA3715E5</sourcePk>
+<identifying>true</identifying>
+<nameOnSource>define</nameOnSource>
+<nameOnTarget>pertenece a</nameOnTarget>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>6A8EAB02-13C3-440B-9838-30F89028ADE4</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>DEC1C731-F015-4B77-9AB2-A93A28F9F1BC</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

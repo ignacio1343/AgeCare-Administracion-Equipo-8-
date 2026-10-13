@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R19_USUARIO_APP_PERFIL_CUIDADORA" directorySegmentName="seg_0" id="383AF5C5-2353-49D2-A204-9DC7E345377F">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>7558A9D7-0799-49F9-86E4-C6E172195FAB</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>publica</nameOnSource>
+<nameOnTarget>pertenece a</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>2EB09568-E720-463E-A215-B69D8C3CFC33</sourceEntity>
+<targetCardinalityString>1</targetCardinalityString>
+<targetEntity>12615BA5-1467-43C6-84B3-A25F0025FC07</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

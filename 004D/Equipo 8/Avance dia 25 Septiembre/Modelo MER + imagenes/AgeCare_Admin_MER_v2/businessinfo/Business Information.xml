@@ -1,0 +1,7 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<BusinessInfoDesign class="oracle.dbtools.crest.model.businessinfo.BusinessInfoDesign" name="Business Information" id="1ACB34BE-E39A-4B1A-B586-764B0A823FFF">
+<createdBy>gamad</createdBy>
+<createdTime>2026-10-02 00:59:36 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<shouldBeOpen>false</shouldBeOpen>
+</BusinessInfoDesign>

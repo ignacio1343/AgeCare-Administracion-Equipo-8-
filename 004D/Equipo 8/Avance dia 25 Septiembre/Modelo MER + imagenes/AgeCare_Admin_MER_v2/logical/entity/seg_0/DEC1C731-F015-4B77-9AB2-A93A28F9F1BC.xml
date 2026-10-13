@@ -1,0 +1,78 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="DEC1C731-F015-4B77-9AB2-A93A28F9F1BC" name="PERMISO_ROL">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<comment><![CDATA[Nivel de acceso de un rol sobre un módulo de la consola (matriz de permisos). Entidad débil de ROL_STAFF.]]></comment>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="modulo" id="B609D261-A3BE-4602-A29B-9D35B15BFAA7">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>40</dataTypeSize>
+<ownDataTypeParameters>40,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="codigo_rol" id="D84011F7-3B22-4FB6-8A4D-63DDB4EA06EF">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<comment><![CDATA[FK a ROL_STAFF]]></comment>
+<generatorID>DC84A6BC-C77E-46B1-9109-C13EA1C54633</generatorID>
+<referedAttribute>206E33FC-9FD9-43CF-BBE4-894A794B96F7</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>40</dataTypeSize>
+<ownDataTypeParameters>40,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nivel_acceso" id="81F266C4-C882-43B6-AB7C-3897C33CFDD7">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<comment><![CDATA[lectura | escritura]]></comment>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>30</dataTypeSize>
+<ownDataTypeParameters>30,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="A417156D-E699-4FD3-9C96-36E9038E9A73" name="PERMISO_ROL PK">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>B609D261-A3BE-4602-A29B-9D35B15BFAA7</attributeRef>
+<attributeRef>D84011F7-3B22-4FB6-8A4D-63DDB4EA06EF</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

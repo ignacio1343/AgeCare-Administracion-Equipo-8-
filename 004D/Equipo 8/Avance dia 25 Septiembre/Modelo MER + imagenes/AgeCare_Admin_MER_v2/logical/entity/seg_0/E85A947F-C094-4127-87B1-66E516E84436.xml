@@ -1,0 +1,87 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="E85A947F-C094-4127-87B1-66E516E84436" name="FUNCIONALIDAD">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<comment><![CDATA[Funcionalidad de la app; se incluye en planes y se mide su adopción.]]></comment>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="codigo_funcionalidad" id="A0FE5C75-DF44-4E6F-801E-90420BCD7047">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>40</dataTypeSize>
+<ownDataTypeParameters>40,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nombre" id="EFAE2176-26F4-43B2-8708-A96592164696">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>120</dataTypeSize>
+<ownDataTypeParameters>120,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="uso_bajo_esperado" id="53B516D3-E76B-41A1-AFA6-3C3062898BEF">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>1</dataTypeSize>
+<ownDataTypeParameters>1,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nota" id="2CC13F8F-5B5D-490A-B2CC-FC25BC5A1B05">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>4000</dataTypeSize>
+<ownDataTypeParameters>4000,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="EF464BB3-C549-4705-9130-0CC07B1CDABE" name="FUNCIONALIDAD PK">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>A0FE5C75-DF44-4E6F-801E-90420BCD7047</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

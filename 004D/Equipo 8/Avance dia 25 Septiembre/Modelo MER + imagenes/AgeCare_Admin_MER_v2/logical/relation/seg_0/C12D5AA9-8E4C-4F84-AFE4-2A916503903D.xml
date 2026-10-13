@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R24_PACIENTE_MEMBRESIA_CIRCULO" directorySegmentName="seg_0" id="C12D5AA9-8E4C-4F84-AFE4-2A916503903D">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>9C0E2AD7-8687-465B-A68A-D7F5E2318956</sourcePk>
+<identifying>true</identifying>
+<nameOnSource>tiene</nameOnSource>
+<nameOnTarget>es de</nameOnTarget>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>80DAC095-1CB4-46C5-B4B0-528C0AFC54F9</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>13BCB216-8BD6-4736-BF40-90C729BE17F7</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

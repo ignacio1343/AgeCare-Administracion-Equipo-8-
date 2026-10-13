@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R10_CUENTA_CLIENTE_SUSCRIPCION" directorySegmentName="seg_0" id="068B25C4-D142-4283-9A29-1237B9F6F0B5">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>D4ADDBE5-25B2-4AFB-B256-C1531639D69D</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>contrata</nameOnSource>
+<nameOnTarget>pertenece a</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>0A37B1F8-7742-469C-BF39-E2C6F12B0AF6</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>41D07D30-B0C6-4EC3-A229-35CC8E173CA4</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R34_COMPONENTE_VERIFICACION_SALUD" directorySegmentName="seg_0" id="ACC05B83-5DFD-43D2-A8E7-7BB9041BFE94">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>A67372C7-B353-4F56-ADBC-0B03E1C87329</sourcePk>
+<identifying>true</identifying>
+<nameOnSource>registra</nameOnSource>
+<nameOnTarget>es de</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>84A3115A-444F-4794-BC44-466C218F8052</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>AF3B230F-DB31-4CA6-8D4B-4049248CA2C2</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

@@ -1,0 +1,7 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<LogicalDesign class="oracle.dbtools.crest.model.design.logical.LogicalDesign" name="Logical" id="88BCFB57-BD84-498B-AC00-7286533B203D" mainViewID="8FE78B7F-B9B2-44DC-8B7F-7247404413DD">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<shouldBeOpen>true</shouldBeOpen>
+</LogicalDesign>

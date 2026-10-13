@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Diagram class="oracle.dbtools.crest.swingui.relational.DPVRelational" name="Relational_1" id="AD2E17B1-DD7F-4B03-99D4-09BE20C9D5E7">
+<createdBy>agecare</createdBy>
+<modifiedBy>agecare</modifiedBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<autoRoute>false</autoRoute>
+<boxInbox>true</boxInbox>
+<showLegend>false</showLegend>
+<showLabels>false</showLabels>
+<showRelAttributes>false</showRelAttributes>
+<gridEnabled>false</gridEnabled>
+<showGrid>false</showGrid>
+<diagramColor>-1</diagramColor>
+<display>false</display>
+<notation>1</notation>
+<objectViews>
+</objectViews>
+<connectors>
+</connectors>
+</Diagram>

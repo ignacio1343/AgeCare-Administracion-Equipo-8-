@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R32_MIEMBRO_STAFF_RESPUESTA_TICKET" directorySegmentName="seg_0" id="215D9C8D-2389-4331-9186-D9B474203882">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>DB865088-2E1B-437B-BD79-8DF74A687B01</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>escribe</nameOnSource>
+<nameOnTarget>es escrita por</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>true</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>49D9581F-C578-4254-A154-011D7E2287F0</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>FE25F249-C733-4076-A68C-D2461B56E9CB</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

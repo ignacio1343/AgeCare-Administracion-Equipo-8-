@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R33_TICKET_ENCUESTA_SATISFACCION" directorySegmentName="seg_0" id="4AD555DE-D616-452E-9896-7E5598A63687">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>26E8151C-4E53-4A81-8111-93DEF165AB05</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>se evalúa con</nameOnSource>
+<nameOnTarget>evalúa</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>557C21F7-767B-44DB-A88B-774B6ACE4DAC</sourceEntity>
+<targetCardinalityString>1</targetCardinalityString>
+<targetEntity>F938D965-658A-4DB3-9444-6C8C854F1313</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

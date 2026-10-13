@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R13_TRANSACCION_PAGO_REEMBOLSO" directorySegmentName="seg_0" id="631415C1-90A0-41A1-8180-C64072C9B97A">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>F1CC9EC6-F704-4195-A673-0CBD3B54345A</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>se revierte con</nameOnSource>
+<nameOnTarget>revierte</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>16F87B75-6404-4F17-88FE-163E9182C26F</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>35A43CC1-A02F-4379-BDB8-62FCD9244F0F</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

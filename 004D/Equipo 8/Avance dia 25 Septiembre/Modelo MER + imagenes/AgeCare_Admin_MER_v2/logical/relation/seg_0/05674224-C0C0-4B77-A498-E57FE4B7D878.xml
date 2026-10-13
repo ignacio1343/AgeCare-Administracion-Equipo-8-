@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R01_ROL_STAFF_MIEMBRO_STAFF" directorySegmentName="seg_0" id="05674224-C0C0-4B77-A498-E57FE4B7D878">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>87B97891-B415-4CB1-8998-5635CA3715E5</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>se asigna a</nameOnSource>
+<nameOnTarget>tiene</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>6A8EAB02-13C3-440B-9838-30F89028ADE4</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>49D9581F-C578-4254-A154-011D7E2287F0</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

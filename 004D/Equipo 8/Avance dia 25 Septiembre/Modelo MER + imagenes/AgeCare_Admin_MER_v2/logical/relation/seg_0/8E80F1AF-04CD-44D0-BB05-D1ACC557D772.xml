@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R30_MIEMBRO_STAFF_TICKET" directorySegmentName="seg_0" id="8E80F1AF-04CD-44D0-BB05-D1ACC557D772">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>DB865088-2E1B-437B-BD79-8DF74A687B01</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>atiende</nameOnSource>
+<nameOnTarget>es atendido por</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>true</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>49D9581F-C578-4254-A154-011D7E2287F0</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>557C21F7-767B-44DB-A88B-774B6ACE4DAC</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

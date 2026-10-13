@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R05_TIPO_ALERTA_UMBRAL_ALERTA" directorySegmentName="seg_0" id="F33C4F1D-E522-4BFE-B6E5-A2EC116BDFF7">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>6819E585-848F-4A00-BC5D-7597436A9BFD</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>se dispara según</nameOnSource>
+<nameOnTarget>pertenece a</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>435485DA-E9EF-403E-82AF-9410ACC83449</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>EE8B1FBE-C176-42F3-ABA2-6D89C2A5B8FF</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R14_MIEMBRO_STAFF_REEMBOLSO" directorySegmentName="seg_0" id="87B6C390-D19B-44FE-AADD-153D6CD72896">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>DB865088-2E1B-437B-BD79-8DF74A687B01</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>autoriza</nameOnSource>
+<nameOnTarget>es autorizado por</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>49D9581F-C578-4254-A154-011D7E2287F0</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>35A43CC1-A02F-4379-BDB8-62FCD9244F0F</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

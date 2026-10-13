@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R27_CATEGORIA_TICKET_TICKET" directorySegmentName="seg_0" id="B4A183EA-2452-4BF5-AC3D-21242AA45E60">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>307E9A4D-6294-463D-9F87-3D16A3A1D299</sourcePk>
+<identifying>false</identifying>
+<nameOnSource>clasifica</nameOnSource>
+<nameOnTarget>es de</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>458FDF5A-6D61-498D-B18A-598DEADFDE13</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>557C21F7-767B-44DB-A88B-774B6ACE4DAC</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>

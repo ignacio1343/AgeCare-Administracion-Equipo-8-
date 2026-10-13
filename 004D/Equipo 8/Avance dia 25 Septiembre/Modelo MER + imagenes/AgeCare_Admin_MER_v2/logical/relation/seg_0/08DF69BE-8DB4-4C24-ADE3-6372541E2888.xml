@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="R39_PLAN_SNAPSHOT_PLAN" directorySegmentName="seg_0" id="08DF69BE-8DB4-4C24-ADE3-6372541E2888">
+<createdBy>agecare</createdBy>
+<createdTime>2026-10-08 03:03:48 UTC</createdTime>
+<ownerDesignName>AgeCare_Admin_MER_v2</ownerDesignName>
+<engineerTo>
+<item key="7F20E26E-5246-4AD0-A4F2-C016DEC4EE84" value="true"/>
+</engineerTo>
+<sourcePk>0DBB2566-B261-4181-9626-EE6FA283A88B</sourcePk>
+<identifying>true</identifying>
+<nameOnSource>se resume en</nameOnSource>
+<nameOnTarget>resume</nameOnTarget>
+<optionalSource>true</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>D717AA67-4F7E-4448-A549-BAA11917105A</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>6AC38ACE-308C-45CA-A768-BAD3CBDD1641</targetEntity>
+<transferable>true</transferable>
+<deleteRule>NO ACTION</deleteRule>
+</Relation>
