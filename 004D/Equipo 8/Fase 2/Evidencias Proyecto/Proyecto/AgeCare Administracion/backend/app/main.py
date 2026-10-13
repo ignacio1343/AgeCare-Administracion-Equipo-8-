@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import errors
 from .config import get_settings
-from .routers import auth, staff
+from .routers import auth, soporte, staff
 
 API = "/api/v1"
 
@@ -18,7 +18,7 @@ errors.install(app)
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().cors_list, allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 
-for r in (auth.router, staff.router,):
+for r in (auth.router, staff.router, soporte.router,):
     app.include_router(r, prefix=API)
 
 

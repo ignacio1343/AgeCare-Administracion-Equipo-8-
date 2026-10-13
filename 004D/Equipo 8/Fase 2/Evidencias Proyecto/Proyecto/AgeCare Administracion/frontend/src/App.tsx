@@ -8,7 +8,10 @@ import Auditoria from './pages/Auditoria'
 import Login from './pages/Login'
 import Perfil from './pages/Perfil'
 import Proximamente from './pages/Proximamente'
+import Soporte from './pages/Soporte'
 import Staff from './pages/Staff'
+import TicketDetalle from './pages/TicketDetalle'
+import TicketNuevo from './pages/TicketNuevo'
 
 // Ruta protegida: exige sesión y, si se indica, permiso sobre un módulo
 function Protegida({ permiso, nivel = 'lectura', children }: { permiso?: string; nivel?: 'lectura' | 'escritura'; children: ReactNode }) {
@@ -37,6 +40,9 @@ export default function App() {
       <Route path="/activar" element={<Activar />} />
       <Route element={<Protegida><Layout /></Protegida>}>
         <Route index element={<Inicio />} />
+        <Route path="soporte" element={<Protegida permiso="soporte"><Soporte /></Protegida>} />
+        <Route path="soporte/nuevo" element={<Protegida permiso="soporte" nivel="escritura"><TicketNuevo /></Protegida>} />
+        <Route path="soporte/:id" element={<Protegida permiso="soporte"><TicketDetalle /></Protegida>} />
         <Route path="staff" element={<Protegida permiso="staff"><Staff /></Protegida>} />
         <Route path="auditoria" element={<Protegida permiso="staff"><Auditoria /></Protegida>} />
         <Route path="perfil" element={<Perfil />} />

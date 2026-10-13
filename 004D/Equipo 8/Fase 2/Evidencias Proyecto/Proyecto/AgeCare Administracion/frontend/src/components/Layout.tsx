@@ -6,7 +6,7 @@ import { useAuth } from '../auth'
 export const MODULOS: { grupo: string; items: { to: string; label: string; ico: string; permiso: string; listo: boolean; sprint?: string }[] }[] = [
   {
     grupo: 'Operación', items: [
-      { to: '/soporte', label: 'Soporte (tickets)', ico: '🎫', permiso: 'soporte', listo: false },
+      { to: '/soporte', label: 'Soporte (tickets)', ico: '🎫', permiso: 'soporte', listo: true },
       { to: '/usuarios', label: 'Usuarios de la app', ico: '👥', permiso: 'usuarios', listo: false },
       { to: '/estado', label: 'Estado operativo', ico: '🖥️', permiso: 'operacion', listo: false },
       { to: '/contenidos', label: 'Contenidos y productos', ico: '📰', permiso: 'contenido|marketplace', listo: false },
