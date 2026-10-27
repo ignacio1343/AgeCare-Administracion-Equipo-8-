@@ -1,0 +1,82 @@
+# Despliegue en Render (Blueprint) con la base de datos en Neon (PostgreSQL gratuito).
+# Este archivo va en la RAÍZ del repositorio; el código está en la carpeta agecare-admin/.
+# Pasos: ver README, sección «Despliegue en Render + Neon».
+# Si Render asigna otro nombre a los servicios, ajusta FRONTEND_URL, CORS_ORIGINS y el rewrite /api/* del sitio estático.
+# Plan gratuito: la API se suspende tras 15 min sin visitas (tarda ~1 min en despertar) y con ella el planificador;
+# así Neon también se suspende y no se agotan las horas de cómputo gratuitas. No usar «pings» para mantenerla despierta.
+services:
+  # API FastAPI + planificador (contenedor Docker)
+  - type: web
+    runtime: docker
+    name: agecare-admin-api
+    plan: free
+    region: virginia            # el más cercano a Neon us-east-1
+    dockerfilePath: ./agecare-admin/backend/Dockerfile
+    dockerContext: ./agecare-admin/backend
+    buildFilter:                # solo se redespliega si cambia el backend (no al subir documentos)
+      paths:
+        - agecare-admin/backend/**
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: checksPass   # Render despliega solo si el CI de GitHub Actions pasa (HU05)
+    envVars:
+      - key: DATABASE_URL       # cadena de conexión de Neon (postgresql://...?sslmode=require)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PASARELA_WEBHOOK_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://agecare-admin.onrender.com
+      - key: CORS_ORIGINS
+        value: https://agecare-admin.onrender.com
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: wellq.co.uk,agecare.cl
+      - key: ZONA_HORARIA
+        value: America/Santiago
+      - key: PLANIFICADOR_INTERVALO_SEG
+        value: "60"
+      - key: COOKIE_SAMESITE    # la consola llama a la API por su mismo origen (rewrite /api/*): Strict
+        value: strict
+      - key: LOG_LEVEL
+        value: INFO
+      # WhatsApp: sin WHATSAPP_MODO la API usa «simulado». Para WhatsApp real, WHATSAPP_MODO=meta y los secretos se
+      # agregan en el panel de Render (no aquí, para que una sincronización del Blueprint no los sobrescriba).
+      # Ver docs/WHATSAPP.md.
+      - key: PLATAFORMA_API_KEY # clave con la que la Plataforma AgeCare informa eventos de salud
+        generateValue: true
+
+  # Consola (SPA React) como sitio estático en la CDN de Render
+  - type: web
+    runtime: static
+    name: agecare-admin
+    autoDeployTrigger: checksPass
+    buildCommand: cd agecare-admin/frontend && npm ci && npm run build
+    staticPublishPath: ./agecare-admin/frontend/dist
+    buildFilter:
+      paths:
+        - agecare-admin/frontend/**
+    envVars:
+      - key: NODE_VERSION       # Vite 7 necesita Node 20.19 o superior
+        value: "22"
+    # Sin VITE_API_URL: la consola llama a /api/v1 en su propio origen y Render lo reenvía a la API.
+    # Así la cookie HttpOnly del refresh token es de primera parte (SameSite=Strict) y no hace falta CORS.
+    routes:
+      - type: rewrite           # 1.º la API (el orden importa: gana la primera regla que coincide)
+        source: /api/*
+        destination: https://agecare-admin-api.onrender.com/api/*
+      - type: rewrite           # 2.º React Router: toda otra ruta vuelve a index.html
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"

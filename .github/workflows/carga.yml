@@ -1,0 +1,59 @@
+# Prueba de carga sobre la consola publicada (EP10-HU07 · CP-19 · RNF-08 y RNF-10).
+# Se lanza a mano: GitHub → Actions → «Prueba de carga» → Run workflow.
+name: Prueba de carga
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL pública de la consola (la API se alcanza por /api/v1)
+        default: https://agecare-admin.onrender.com
+      usuarios:
+        description: Usuarios simultáneos
+        default: "50"
+      duracion:
+        description: Duración (formato Locust, p. ej. 2m)
+        default: 2m
+
+permissions:
+  contents: read
+
+jobs:
+  locust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agecare-admin/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install locust==2.46.7
+
+      - name: Despertar el servicio y medir cuánto tarda (RNF-10, plan gratuito de Render)
+        run: |
+          inicio=$(date +%s)
+          for i in $(seq 1 60); do
+            curl -fsS --max-time 10 "${{ inputs.url }}/api/v1/health/db" && break; sleep 3
+          done
+          echo "Tiempo hasta responder (incluye despertar de Render y Neon): $(( $(date +%s) - inicio )) s" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Ejecutar Locust
+        env:
+          CARGA_EMAIL: ${{ secrets.CARGA_EMAIL }}
+          CARGA_PASSWORD: ${{ secrets.CARGA_PASSWORD }}
+        run: |
+          locust -f tests/carga/locustfile.py --host "${{ inputs.url }}" --headless \
+                 -u "${{ inputs.usuarios }}" -r 5 -t "${{ inputs.duracion }}" --csv carga --html carga.html --only-summary
+
+      - name: Evaluar contra el criterio de aceptación (p95 < 800 ms y 0 errores)
+        run: |
+          echo "## Prueba de carga · ${{ inputs.usuarios }} usuarios · ${{ inputs.duracion }}" >> "$GITHUB_STEP_SUMMARY"
+          python tests/carga/evaluar.py carga_stats.csv | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-carga
+          path: agecare-admin/backend/carga*
