@@ -233,7 +233,7 @@ def _graph(metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
     try:
         # La URL base es fija (https://graph.facebook.com); no depende de datos del usuario
         with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
-            return json.loads(r.read())
+            crudo = r.read()
     except urllib.error.HTTPError as e:
         try:
             err = json.loads(e.read()).get("error", {})
@@ -243,8 +243,17 @@ def _graph(metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
         ayuda = AYUDA_ERRORES.get(codigo) or AYUDA_ERRORES.get(err.get("error_subcode"), "")
         msg = f"Meta {e.code}: {err.get('message', e.reason)} (código {codigo})" + (f". {ayuda}" if ayuda else "")
         raise ErrorEnvio(msg, reintentable=e.code == 429 or e.code >= 500) from None
-    except (urllib.error.URLError, TimeoutError, ValueError) as e:
-        raise ErrorEnvio(f"Sin respuesta válida de Meta: {type(e).__name__}") from None
+    except urllib.error.URLError as e:
+        raise ErrorEnvio(f"No se pudo conectar con Meta: {e.reason}") from None
+    except TimeoutError:
+        raise ErrorEnvio("Meta no respondió a tiempo (10 s).") from None
+    except ValueError as e:  # http.client rechaza la petición antes de enviarla (cabecera o URL inválida)
+        raise ErrorEnvio(f"Petición inválida ({e}). Revisa que WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID y "
+                         "WHATSAPP_API_VERSION no tengan espacios ni saltos de línea.", reintentable=False) from None
+    try:
+        return json.loads(crudo)
+    except ValueError:
+        raise ErrorEnvio("Meta respondió algo que no es JSON.") from None
 
 
 def _enviar_meta(m: MensajeWhatsapp, params: list[str]) -> str:

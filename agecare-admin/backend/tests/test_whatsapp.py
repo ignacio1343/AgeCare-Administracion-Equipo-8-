@@ -356,3 +356,12 @@ def test_prueba_fallida_muestra_ayuda_y_no_queda_pendiente(client, auth, monkeyp
 def test_prueba_exige_consentimiento(client, auth):
     _, uid = _escenario(consentimiento=False)
     assert client.post(f"{API}/whatsapp/prueba", headers=auth("soporte"), json={"id_usuario": uid}).status_code == 409
+
+
+def test_variables_de_whatsapp_sin_espacios_ni_saltos(monkeypatch):
+    from app.config import Settings
+    monkeypatch.setenv("WHATSAPP_TOKEN", " EAAabc123\n")
+    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1264 0894 8679 7320 ")
+    monkeypatch.setenv("WHATSAPP_API_VERSION", "v25.0\r\n")
+    s = Settings()
+    assert (s.whatsapp_token, s.whatsapp_phone_number_id, s.whatsapp_api_version) == ("EAAabc123", "1264089486797320", "v25.0")

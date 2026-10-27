@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     zona_horaria: str = "America/Santiago"
     log_level: str = "INFO"  # registros técnicos (Render los muestra en la pestaña Logs)  # fechas de negocio (vigencias, métricas diarias)
 
+    @field_validator("whatsapp_modo", "whatsapp_token", "whatsapp_phone_number_id", "whatsapp_api_version",
+                     "whatsapp_plantilla", "whatsapp_idioma", "whatsapp_app_secret", "whatsapp_verify_token",
+                     "whatsapp_waba_id", "plataforma_api_key")
+    @classmethod
+    def _sin_espacios(cls, v: str) -> str:
+        """Al pegar claves en el panel de Render suelen colarse espacios o saltos de línea: se eliminan."""
+        return "".join(v.split()) if isinstance(v, str) else v
+
     @field_validator("database_url")
     @classmethod
     def _driver_psycopg(cls, v: str) -> str:
