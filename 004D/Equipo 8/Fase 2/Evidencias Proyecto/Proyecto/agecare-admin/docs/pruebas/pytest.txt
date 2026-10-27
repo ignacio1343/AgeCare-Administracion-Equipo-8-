@@ -1,0 +1,91 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.16, pytest-8.3.4, pluggy-1.6.0 -- /home/claude/agecare-admin/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/claude/agecare-admin/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: locust-2.46.7, platformdirs-4.12.4, anyio-4.15.1, cov-7.1.0
+collecting ... collected 45 items
+
+tests/test_auth.py::test_login_ok_y_perfil_con_permisos PASSED           [  2%]
+tests/test_auth.py::test_login_no_revela_si_el_correo_existe PASSED      [  4%]
+tests/test_auth.py::test_bloqueo_tras_5_intentos PASSED                  [  6%]
+tests/test_auth.py::test_sin_token_401_y_formato_de_error PASSED         [  8%]
+tests/test_auth.py::test_refresh_rota_y_detecta_reuso PASSED             [ 11%]
+tests/test_auth.py::test_logout_revoca_refresh PASSED                    [ 13%]
+tests/test_auth.py::test_flujo_segundo_factor PASSED                     [ 15%]
+tests/test_modulos.py::test_usuarios_buscar_desactivar_e_invitar PASSED  [ 17%]
+tests/test_modulos.py::test_monitor_abre_incidente_tras_tres_fallos PASSED [ 20%]
+tests/test_modulos.py::test_ciclo_de_vida_de_incidente PASSED            [ 22%]
+tests/test_modulos.py::test_contenido_publicar_programar_y_eliminar PASSED [ 24%]
+tests/test_modulos.py::test_producto_exige_https PASSED                  [ 26%]
+tests/test_modulos.py::test_revision_de_cuidadora PASSED                 [ 28%]
+tests/test_modulos.py::test_moderacion_reglas PASSED                     [ 31%]
+tests/test_modulos.py::test_flujo_comercial_completo PASSED              [ 33%]
+tests/test_modulos.py::test_metricas_y_consolidacion PASSED              [ 35%]
+tests/test_modulos.py::test_parametros_con_bloqueo_optimista PASSED      [ 37%]
+tests/test_modulos.py::test_umbrales PASSED                              [ 40%]
+tests/test_modulos.py::test_versiones_legales PASSED                     [ 42%]
+tests/test_soporte.py::test_registrar_ticket_enlazado_y_sin_enlazar PASSED [ 44%]
+tests/test_soporte.py::test_permisos_por_rol PASSED                      [ 46%]
+tests/test_soporte.py::test_transiciones_asignacion_y_encuesta PASSED    [ 48%]
+tests/test_soporte.py::test_primera_respuesta_ignora_notas_internas PASSED [ 51%]
+tests/test_soporte.py::test_asignar_a_quien_no_puede_atender PASSED      [ 53%]
+tests/test_soporte.py::test_busqueda_en_cola[Wearable] PASSED            [ 55%]
+tests/test_soporte.py::test_busqueda_en_cola[ana@example.com] PASSED     [ 57%]
+tests/test_soporte.py::test_busqueda_en_cola[#1001] PASSED               [ 60%]
+tests/test_soporte.py::test_busqueda_en_cola[1001] PASSED                [ 62%]
+tests/test_soporte.py::test_detalle_por_numero_y_indicadores PASSED      [ 64%]
+tests/test_soporte.py::test_escrituras_quedan_en_auditoria PASSED        [ 66%]
+tests/test_staff.py::test_crear_invitar_activar_e_ingresar PASSED        [ 68%]
+tests/test_staff.py::test_reglas_de_creacion PASSED                      [ 71%]
+tests/test_staff.py::test_solo_admin_gestiona_staff PASSED               [ 73%]
+tests/test_staff.py::test_no_puede_desactivarse_ni_quitar_ultimo_admin PASSED [ 75%]
+tests/test_staff.py::test_desactivar_revoca_sesiones_y_queda_en_auditoria PASSED [ 77%]
+tests/test_unitarias.py::test_hash_argon2id_y_verificacion PASSED        [ 80%]
+tests/test_unitarias.py::test_verificacion_tolera_hash_vacio_o_invalido PASSED [ 82%]
+tests/test_unitarias.py::test_jwt_de_acceso_contiene_rol_y_expira PASSED [ 84%]
+tests/test_unitarias.py::test_jwt_manipulado_es_rechazado PASSED         [ 86%]
+tests/test_unitarias.py::test_totp_valido_e_invalido PASSED              [ 88%]
+tests/test_unitarias.py::test_tokens_opacos_unicos_y_hash_sha256 PASSED  [ 91%]
+tests/test_unitarias.py::test_firma_hmac_del_webhook PASSED              [ 93%]
+tests/test_unitarias.py::test_percentiles_del_monitor PASSED             [ 95%]
+tests/test_unitarias.py::test_transiciones_de_ticket PASSED              [ 97%]
+tests/test_unitarias.py::test_transiciones_de_incidente_terminales PASSED [100%]
+
+- generated xml file: /tmp/claude-0/-home-claude/ee7c5893-eb5f-5bab-a7ce-0b4443968b61/scratchpad/e2/evid/junit.xml -
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.16-final-0 _______________
+
+Name                           Stmts   Miss  Cover
+--------------------------------------------------
+app/__init__.py                    0      0   100%
+app/audit.py                      26      1    96%
+app/catalogos.py                  64      1    98%
+app/config.py                     29      0   100%
+app/db.py                         36      1    97%
+app/deps.py                       31      2    94%
+app/errors.py                     30      2    93%
+app/main.py                       24      3    88%
+app/metricas_job.py               45      7    84%
+app/models.py                    468      0   100%
+app/monitor.py                    65      1    98%
+app/pasarela.py                   16      1    94%
+app/planificador.py               47     26    45%
+app/routers/__init__.py            0      0   100%
+app/routers/auth.py              133      6    95%
+app/routers/comercial.py         344     56    84%
+app/routers/configuracion.py     167     23    86%
+app/routers/contenido.py         225     43    81%
+app/routers/metricas.py          179     33    82%
+app/routers/moderacion.py         74      3    96%
+app/routers/operacion.py         175     20    89%
+app/routers/soporte.py           174     20    89%
+app/routers/staff.py             106     16    85%
+app/routers/usuarios.py           81     10    88%
+app/schemas.py                   176      0   100%
+app/security.py                   42      1    98%
+app/util.py                       16      1    94%
+--------------------------------------------------
+TOTAL                           2773    277    90%
+============================= 45 passed in 47.44s ==============================

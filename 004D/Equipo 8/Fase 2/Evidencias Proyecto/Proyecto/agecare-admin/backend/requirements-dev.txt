@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest==8.3.4
+httpx==0.28.1
+pytest-cov==7.1.0
+# Calidad y seguridad (opcionales)
+locust==2.46.7
+bandit==1.9.4
+pip-audit

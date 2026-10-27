@@ -1,0 +1,7 @@
+$ GET /api/v1/soporte/tickets            -> 200 0.038 s
+$ pg_ctl stop -m fast                    (PostgreSQL detenido)
+$ GET /api/v1/soporte/tickets            -> 500 0.004 s {"error":{"code":"INTERNAL_ERROR","message":"Error interno. Revisa el request_id en los logs.", "request_id":"906243bc-..."}}
+$ GET /api/v1/soporte/tickets            -> 500 0.015 s (mismo formato, sin detalles internos)
+$ pg_ctl start                           (PostgreSQL reiniciado)
+$ GET /api/v1/soporte/tickets            -> 200 0.045 s  (la API se recupera sin reiniciarse: pool_pre_ping)
+$ GET /api/v1/soporte/tickets            -> 200 0.026 s

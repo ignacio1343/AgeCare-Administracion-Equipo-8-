@@ -1,0 +1,31 @@
+Run started:2026-10-10 02:09:09.078890+00:00
+
+Test results:
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: app/monitor.py:43:17
+42	def ejecutar_ciclo(db: Session, simular_falla: set[str] | None = None, rnd: random.Random | None = None) -> list[Incidente]:
+43	    rnd = rnd or random.Random()
+44	    simular_falla = simular_falla or set()
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 3313
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 1
+Files skipped (0):

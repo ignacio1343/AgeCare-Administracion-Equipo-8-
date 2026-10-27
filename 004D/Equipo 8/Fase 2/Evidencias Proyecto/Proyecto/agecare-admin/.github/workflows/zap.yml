@@ -1,0 +1,58 @@
+# Pruebas de seguridad OWASP (EP10-HU08 · CP-20 · RNF-04) con OWASP ZAP sobre la consola publicada.
+# Baseline: araña la consola y analiza las respuestas de forma pasiva (no ataca ni modifica datos).
+# Se lanza a mano: GitHub → Actions → «Seguridad OWASP ZAP» → Run workflow. El reporte queda como artefacto.
+name: Seguridad OWASP ZAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL pública de la consola
+        default: https://agecare-admin.onrender.com
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Despertar el servicio
+        run: for i in $(seq 1 60); do curl -fsS --max-time 10 "${{ inputs.url }}/api/v1/health" && break; sleep 3; done
+
+      - name: Escaneo baseline de la consola
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ inputs.url }}
+          rules_file_name: .zap/rules.tsv
+          cmd_options: -a -j
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-consola
+      - run: cp report_json.json zap_consola.json
+
+      - name: Escaneo baseline de la API (cabeceras y respuestas de /api/v1)
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ inputs.url }}/api/v1/openapi.json
+          rules_file_name: .zap/rules.tsv
+          cmd_options: -a
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-api
+      - run: cp report_json.json zap_api.json
+
+      - name: Revisar que no haya alertas de riesgo alto (RNF-04)
+        run: |
+          altos=$(python3 - <<'PY'
+          import json, glob
+          n = 0
+          for f in glob.glob("zap_*.json"):
+              for site in json.load(open(f)).get("site", []):
+                  n += sum(1 for a in site.get("alerts", []) if a.get("riskcode") == "3")
+          print(n)
+          PY
+          )
+          echo "Alertas de riesgo alto: $altos" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$altos" -eq 0

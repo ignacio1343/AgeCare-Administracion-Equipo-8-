@@ -1,0 +1,14 @@
+DEF-10 · Verificación v0.4.0 (24/10/2026): API con la base de datos detenida, planificador cada 1 s durante 30 s.
+Antes: una traza completa (~40 líneas) por ciclo. Ahora: una línea al primer fallo y un recordatorio cada 10 ciclos.
+
+INFO:     Started server process [18327]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+2026-10-24 21:47:19,950 ERROR planificador: ciclo fallido (1 seguidos): OperationalError: connection failed: connection to server at "127.0.0.1", port 5999 failed: Connection refused
+2026-10-24 21:47:28,964 ERROR planificador: ciclo fallido (10 seguidos): OperationalError: connection failed: connection to server at "127.0.0.1", port 5999 failed: Connection refused
+2026-10-24 21:47:38,995 ERROR planificador: ciclo fallido (20 seguidos): OperationalError: connection failed: connection to server at "127.0.0.1", port 5999 failed: Connection refused
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18327]
