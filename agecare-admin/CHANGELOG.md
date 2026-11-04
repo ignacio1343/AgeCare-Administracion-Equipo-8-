@@ -1,12 +1,24 @@
 # Cambios
 
+## v0.6.1 · 04/11/2026 · Código del registro por correo y planes con los usuarios reales
+
+- **El código del registro llega por correo** (Brevo, API HTTPS, gratis hasta 300 al día). Reemplaza al SMS
+  simulado. El plan gratuito de Render bloquea SMTP, por eso no se usa Gmail directo.
+  - Se mantienen los 3 intentos, el reenvío cada 60 s y el vencimiento de 10 min.
+  - Se quitó Twilio.
+- Migración `0005_correo`: `verificacion_sms` pasa a llamarse `verificacion_correo`.
+- **Planes y suscripciones muestran a los mismos usuarios de la app**: cada representante tiene una cuenta con su
+  nombre, correo y RUT, y cada residente su suscripción.
+  - Se reemplazaron, una sola vez al desplegar, las cuentas demo inventadas y las de tipo proveedor.
+  - Los usuarios y pacientes demo reciben RUT y apellidos separados.
+
 ## v0.6.0 · 04/11/2026 · Portal web de familias
 
 - **Portal responsivo en `/portal`** con tres vistas: representante, residente y cuidador.
 - **Registro del representante** con correo, RUT (dígito verificador, módulo 11), nombres, primer y segundo
   apellido, teléfono con selector de país (+56, +54…) y contraseña repetida.
-  - Si el RUT no tiene cuenta, se envía un **código por SMS**: 3 intentos, reenvío cada 60 s, máximo 3 envíos y
-    vence en 10 min. Funciona en modo simulado o con Twilio Verify.
+  - Si el RUT no tiene cuenta, se envía un **código de verificación**: 3 intentos, reenvío cada 60 s, máximo 3
+    envíos y vence en 10 min (en v0.6.1 pasó de SMS a correo).
   - Se registra el consentimiento de los términos (Ley 19.628) y, opcionalmente, el de WhatsApp.
 - **Pasarela de pago real: Webpay Plus de Transbank** (API REST v1.2, entorno de integración).
   - Contratar, cambiar de plan y **«Pagar mes»**.

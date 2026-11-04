@@ -4,11 +4,11 @@ from datetime import date, timedelta
 
 import pytest
 
-from app import rut, sms, webpay
+from app import correo, rut, webpay
 from app.config import get_settings
 from app.db import SessionLocal, utcnow
 from app.models import (Contenido, MensajeWhatsapp, NotificacionApp, OrdenPago, Suscripcion, Ticket, TransaccionPago,
-                        UsuarioApp, VerificacionSms)
+                        UsuarioApp, VerificacionCorreo)
 from tests.conftest import API, RH
 
 P = f"{API}/portal"
@@ -105,7 +105,9 @@ def test_registro_validaciones(client):
     r = client.post(f"{P}/registro", json=_datos(telefono="12345"))
     assert r.status_code == 422 and r.json()["error"]["details"][0]["field"] == "telefono"
     r = client.post(f"{P}/registro", json=_datos(pais="AR", telefono="9 11 2345 6789"))
-    assert r.status_code == 201 and r.json()["telefono"].startswith("+549")
+    assert r.status_code == 201 and r.json()["destino"] == "re•••@example.com"
+    with SessionLocal() as db:
+        assert db.query(VerificacionCorreo).one().telefono.startswith("+549")
     r = client.post(f"{P}/registro", json=_datos(email="ana@example.com"))  # correo de un usuario existente
     assert r.status_code == 409 and r.json()["error"]["code"] == "EMAIL_EXISTS"
 
@@ -118,13 +120,13 @@ def test_registro_completo_y_rut_ya_registrado(client):
     with SessionLocal() as db:
         u = db.query(UsuarioApp).filter_by(email="rep@example.com").one()
         assert u.telefono == "+56975658296" and u.origen == "portal" and u.fecha_aceptacion_terminos
-        v = db.query(VerificacionSms).one()
+        v = db.query(VerificacionCorreo).one()
         assert v.estado == "verificada" and v.datos == "{}"  # el hash de la clave no queda en la verificación
     r = client.post(f"{P}/registro", json=_datos(email="otro@example.com"))
     assert r.status_code == 409 and r.json()["error"]["code"] == "RUT_EXISTS"
 
 
-def test_codigo_sms_intentos_reenvio_y_expiracion(client):
+def test_codigo_por_correo_intentos_reenvio_y_expiracion(client):
     v = client.post(f"{P}/registro", json=_datos()).json()
     assert v["modo"] == "simulado" and len(v["codigo_demo"]) == 6 and v["intentos_restantes"] == 3
     malo = "000000" if v["codigo_demo"] != "000000" else "111111"
@@ -133,7 +135,7 @@ def test_codigo_sms_intentos_reenvio_y_expiracion(client):
     r = client.post(f"{P}/registro/reenviar", json={"verificacion": v["verificacion"]})
     assert r.status_code == 429 and r.json()["error"]["code"] == "RESEND_TOO_SOON"
     with SessionLocal() as db:  # pasan 61 segundos
-        x = db.query(VerificacionSms).one()
+        x = db.query(VerificacionCorreo).one()
         x.fecha_ultimo_envio = utcnow() - timedelta(seconds=61)
         db.commit()
     r = client.post(f"{P}/registro/reenviar", json={"verificacion": v["verificacion"]})
@@ -148,7 +150,7 @@ def test_codigo_sms_intentos_reenvio_y_expiracion(client):
     assert r.status_code == 410  # bloqueada: hay que registrarse de nuevo
     v2 = client.post(f"{P}/registro", json=_datos()).json()
     with SessionLocal() as db:
-        x = db.query(VerificacionSms).filter_by(estado="pendiente").one()
+        x = db.query(VerificacionCorreo).filter_by(estado="pendiente").one()
         x.fecha_expiracion = utcnow() - timedelta(seconds=1)
         db.commit()
     r = client.post(f"{P}/registro/confirmar", json={"verificacion": v2["verificacion"], "codigo": v2["codigo_demo"]})
@@ -156,27 +158,72 @@ def test_codigo_sms_intentos_reenvio_y_expiracion(client):
     assert client.post(f"{P}/registro/reenviar", json={"verificacion": "x" * 20}).status_code == 404
 
 
-def test_sms_con_twilio(client, monkeypatch):
-    llamadas = []
+class _Resp:
+    def __init__(self, cuerpo=b"{}"):
+        self.cuerpo = cuerpo
 
-    def falso(ruta, campos):
-        llamadas.append((ruta, campos))
-        return {"status": "approved" if campos.get("Code") == "424242" else "pending"}
+    def __enter__(self):
+        return self
 
-    monkeypatch.setattr(get_settings(), "sms_modo", "twilio")
-    monkeypatch.setattr(sms, "_twilio", falso)
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return self.cuerpo
+
+
+def _brevo(monkeypatch, respuesta=None):
+    """Modo brevo con una API falsa: devuelve la lista de correos «enviados»."""
+    import json as _json
+    import urllib.request
+    st = get_settings()
+    monkeypatch.setattr(st, "correo_modo", "brevo")
+    monkeypatch.setattr(st, "brevo_api_key", "xkeysib-prueba")
+    monkeypatch.setattr(st, "correo_remitente", "agecare.equipo8@gmail.com")
+    enviados = []
+
+    def urlopen(req, timeout):
+        if respuesta:
+            raise respuesta
+        enviados.append((req, _json.loads(req.data)))
+        return _Resp(b'{"messageId": "<1@brevo>"}')
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    return enviados
+
+
+def test_codigo_llega_por_correo_con_brevo(client, monkeypatch):
+    enviados = _brevo(monkeypatch)
     v = client.post(f"{P}/registro", json=_datos()).json()
-    assert v["modo"] == "twilio" and v["codigo_demo"] is None
-    assert llamadas[0] == ("Verifications", {"To": "+56975658296", "Channel": "sms", "Locale": "es"})
-    assert client.post(f"{P}/registro/confirmar", json={"verificacion": v["verificacion"], "codigo": "111111"}).status_code == 422
-    r = client.post(f"{P}/registro/confirmar", json={"verificacion": v["verificacion"], "codigo": "424242"})
-    assert r.status_code == 201 and llamadas[-1][0] == "VerificationCheck"
+    assert v["modo"] == "brevo" and v["codigo_demo"] is None and v["destino"] == "re•••@example.com"
+    req, cuerpo = enviados[0]
+    assert req.full_url == "https://api.brevo.com/v3/smtp/email" and req.headers["Api-key"] == "xkeysib-prueba"
+    assert cuerpo["to"][0]["email"] == "rep@example.com" and cuerpo["sender"]["email"] == "agecare.equipo8@gmail.com"
+    codigo = cuerpo["subject"][:6]
+    assert codigo.isdigit() and codigo in cuerpo["htmlContent"] and "Carla" in cuerpo["htmlContent"]
+    with SessionLocal() as db:  # solo se guarda el hash del código
+        assert db.query(VerificacionCorreo).one().codigo_hash not in (None, codigo)
+    assert client.post(f"{P}/registro/confirmar", json={"verificacion": v["verificacion"], "codigo": "000000" if codigo != "000000" else "111111"}).status_code == 422
+    r = client.post(f"{P}/registro/confirmar", json={"verificacion": v["verificacion"], "codigo": codigo})
+    assert r.status_code == 201 and r.json()["usuario"]["vistas"] == ["representante"]
 
 
-def test_twilio_sin_credenciales_responde_502(client, monkeypatch):
-    monkeypatch.setattr(get_settings(), "sms_modo", "twilio")
+def test_correo_sin_configurar_o_rechazado_responde_502(client, monkeypatch):
+    import io
+    import urllib.error
+    monkeypatch.setattr(get_settings(), "correo_modo", "brevo")
     r = client.post(f"{P}/registro", json=_datos())
-    assert r.status_code == 502 and "Twilio" in r.json()["error"]["message"]
+    assert r.status_code == 502 and "BREVO_API_KEY" in r.json()["error"]["message"]
+    _brevo(monkeypatch, urllib.error.HTTPError("u", 401, "Unauthorized", {}, io.BytesIO(b'{"message": "Key not found"}')))
+    r = client.post(f"{P}/registro", json=_datos())
+    assert r.status_code == 502 and "Key not found" in r.json()["error"]["message"] and "Authorised IPs" in r.json()["error"]["message"]
+    _brevo(monkeypatch, urllib.error.URLError("sin red"))
+    assert client.post(f"{P}/registro", json=_datos()).status_code == 502
+    with SessionLocal() as db:
+        assert db.query(VerificacionCorreo).count() == 0  # si el correo no sale, no queda registro pendiente
+
+
+def test_enmascarar_correo():
+    assert correo.enmascarar("carolina.gutierrez@gmail.com") == "ca•••@gmail.com"
 
 
 # ---------------------------------------------------------------- sesión (CU45)
@@ -673,44 +720,13 @@ def test_planificador_anula_ordenes_abandonadas(client):
     assert client.get(f"{P}/pagos/{o['orden_compra']}").json()["estado"] == "anulada"
 
 
-def test_cliente_twilio_arma_la_peticion(monkeypatch):
-    import io
-    import json as _json
-    import urllib.error
-    import urllib.request
-
-    st = get_settings()
-    for k, v in (("twilio_account_sid", "AC123"), ("twilio_auth_token", "tok"), ("twilio_verify_sid", "VA999")):
-        monkeypatch.setattr(st, k, v)
-    vistas = []
-
-    class Resp(io.BytesIO):
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    def urlopen(req, timeout):
-        vistas.append(req)
-        if req.full_url.endswith("VerificationCheck"):
-            raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, io.BytesIO(b"{}"))
-        return Resp(_json.dumps({"status": "pending"}).encode())
-
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
-    assert sms._twilio("Verifications", {"To": "+56911112222", "Channel": "sms"})["status"] == "pending"
-    assert vistas[0].full_url == "https://verify.twilio.com/v2/Services/VA999/Verifications"
-    assert vistas[0].headers["Authorization"].startswith("Basic ")
-    assert sms._twilio("VerificationCheck", {"To": "+56911112222", "Code": "1"}) == {"status": "expired"}
-
-
 def test_consola_ve_los_pagos_del_portal(client, auth):
     h = _registrar(client)
     _contratar(client, h, "platino")
     r = client.get(f"{API}/comercial/ordenes-portal", headers=auth("analista")).json()
     assert r["total"] == 1 and r["items"][0]["estado"] == "aprobada" and r["items"][0]["representante"] == "Carla Rojas Vidal"
     subs = client.get(f"{API}/comercial/suscripciones", headers=auth("admin")).json()["items"]
-    assert subs[0]["plan"] == "Platino" and subs[0]["residente"] is None
+    assert subs[0]["plan"] == "Platino" and subs[0]["residente"] is None and subs[0]["cuenta"] == "Carla Rojas Vidal"
     assert client.get(f"{API}/comercial/ordenes-portal", headers=auth("soporte")).status_code == 403
 
 

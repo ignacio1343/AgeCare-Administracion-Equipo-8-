@@ -1,4 +1,4 @@
-"""Portal web · acceso: CU44 Registrarse como representante (con código SMS) · CU45 Iniciar sesión en el portal
+"""Portal web · acceso: CU44 Registrarse como representante (con código por correo) · CU45 Iniciar sesión en el portal
 · CU46 Recuperar contraseña (crea un ticket para soporte).
 
 Sesión igual que la consola pero separada: access token de tipo «app» (15 min, en memoria) y refresh token rotativo
@@ -14,12 +14,12 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from .. import portal, rut as rutmod, sms
+from .. import correo, portal, rut as rutmod
 from ..audit import client_ip, registrar
 from ..config import get_settings
 from ..db import get_db, utcnow
 from ..errors import ApiError
-from ..models import (CuentaCliente, NotificacionApp, SesionApp, Ticket, UsuarioApp, UsuarioPerfil, VerificacionSms,
+from ..models import (CuentaCliente, NotificacionApp, SesionApp, Ticket, UsuarioApp, UsuarioPerfil, VerificacionCorreo,
                       VersionLegal)
 from ..schemas import _password_ok
 from ..security import (DUMMY_HASH, create_app_token, decode_app_token, hash_password, needs_rehash, new_opaque_token,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/portal", tags=["Portal · acceso"])
 COOKIE = "aca_portal"
 COOKIE_PATH = "/api/v1/portal/auth"
 CSRF_HEADER = "X-ACA-Refresh"
-SMS_INTENTOS, SMS_ENVIOS, SMS_ESPERA_SEG, SMS_VIGENCIA_MIN = 3, 3, 60, 10
+COD_INTENTOS, COD_ENVIOS, COD_ESPERA_SEG, COD_VIGENCIA_MIN = 3, 3, 60, 10
 NOMBRE_RE = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]+$")
 
 # País → (prefijo, nombre, patrón del número sin prefijo, ejemplo)
@@ -184,7 +184,7 @@ class RegistroIn(ClavesIn):
 
 class VerificacionOut(BaseModel):
     verificacion: str
-    telefono: str
+    destino: str  # correo enmascarado al que se envió el código
     modo: str
     codigo_demo: str | None
     reenviar_en_seg: int
@@ -269,8 +269,8 @@ def _refresh_de(request: Request) -> str | None:
     return token if token and 10 <= len(token) <= 200 else None
 
 
-def _verificacion(db: Session, token: str) -> VerificacionSms:
-    v = db.scalar(select(VerificacionSms).where(VerificacionSms.token_hash == sha256(token)))
+def _verificacion(db: Session, token: str) -> VerificacionCorreo:
+    v = db.scalar(select(VerificacionCorreo).where(VerificacionCorreo.token_hash == sha256(token)))
     if v is None:
         raise ApiError(404, "VERIFICATION_NOT_FOUND", "El registro no existe. Vuelve a empezar.")
     if v.estado == "pendiente" and v.fecha_expiracion < utcnow():
@@ -284,10 +284,11 @@ def _verificacion(db: Session, token: str) -> VerificacionSms:
     return v
 
 
-def _verif_out(v: VerificacionSms, token: str, codigo: str | None) -> VerificacionOut:
-    return VerificacionOut(verificacion=token, telefono=enmascarar(v.telefono), modo=v.proveedor, codigo_demo=codigo,
-                           reenviar_en_seg=SMS_ESPERA_SEG, expira_en_seg=SMS_VIGENCIA_MIN * 60,
-                           intentos_restantes=SMS_INTENTOS - v.intentos)
+def _verif_out(v: VerificacionCorreo, token: str, codigo: str | None) -> VerificacionOut:
+    return VerificacionOut(verificacion=token, destino=correo.enmascarar(v.email), modo=v.proveedor,
+                           codigo_demo=codigo if v.proveedor == "simulado" else None,
+                           reenviar_en_seg=COD_ESPERA_SEG, expira_en_seg=COD_VIGENCIA_MIN * 60,
+                           intentos_restantes=COD_INTENTOS - v.intentos)
 
 
 def _ocupado(db: Session, rut: str | None, email: str | None) -> None:
@@ -306,27 +307,29 @@ def paises():
 
 
 @router.post("/registro", response_model=VerificacionOut, status_code=201,
-             summary="CU44 · Registrarse como representante (paso 1: datos y envío del código por SMS)")
+             summary="CU44 · Registrarse como representante (paso 1: datos y envío del código por correo)")
 def registro(data: RegistroIn, request: Request, db: Session = Depends(get_db)):
     tel = telefono_e164(data.pais, data.telefono)
     _ocupado(db, data.rut, data.email)
     now = utcnow()
     hace_1h = now - timedelta(hours=1)
-    if db.scalar(select(func.count()).where(VerificacionSms.telefono == tel, VerificacionSms.fecha_creacion >= hace_1h)) >= 5 \
-            or db.scalar(select(func.count()).where(VerificacionSms.ip == client_ip(request),
-                                                    VerificacionSms.fecha_creacion >= hace_1h)) >= 10:
-        raise ApiError(429, "RATE_LIMITED", "Demasiados registros desde este teléfono o red. Intenta en una hora.")
+    email = data.email.lower()
+    if db.scalar(select(func.count()).where(VerificacionCorreo.email == email, VerificacionCorreo.fecha_creacion >= hace_1h)) >= 5 \
+            or db.scalar(select(func.count()).where(VerificacionCorreo.ip == client_ip(request),
+                                                    VerificacionCorreo.fecha_creacion >= hace_1h)) >= 10:
+        raise ApiError(429, "RATE_LIMITED", "Demasiados registros desde este correo o red. Intenta en una hora.")
+    codigo, codigo_hash = correo.nuevo_codigo()
     try:
-        codigo_hash, codigo = sms.enviar(tel)
-    except sms.ErrorSms as e:
-        raise ApiError(502, "SMS_ERROR", f"No pudimos enviar el SMS: {e}")
+        correo.enviar_codigo(email, data.nombres, codigo, COD_VIGENCIA_MIN)
+    except correo.ErrorCorreo as e:
+        raise ApiError(502, "EMAIL_ERROR", f"No pudimos enviar el correo con el código. {e}")
     terminos = db.scalar(select(VersionLegal.id_version).where(VersionLegal.tipo_documento == "terminos",
                                                                VersionLegal.estado == "publicada")
                          .order_by(VersionLegal.version_mayor.desc(), VersionLegal.version_menor.desc()).limit(1))
     token = new_opaque_token()
-    v = VerificacionSms(token_hash=sha256(token), telefono=tel, rut=data.rut, email=data.email.lower(),
-                        proveedor=sms.modo(), codigo_hash=codigo_hash, ip=client_ip(request),
-                        fecha_expiracion=now + timedelta(minutes=SMS_VIGENCIA_MIN),
+    v = VerificacionCorreo(token_hash=sha256(token), telefono=tel, rut=data.rut, email=email,
+                           proveedor=correo.modo(), codigo_hash=codigo_hash, ip=client_ip(request),
+                        fecha_expiracion=now + timedelta(minutes=COD_VIGENCIA_MIN),
                         datos=json.dumps({"nombres": data.nombres, "primer_apellido": data.primer_apellido,
                                           "segundo_apellido": data.segundo_apellido,
                                           "password_hash": hash_password(data.password),
@@ -339,37 +342,35 @@ def registro(data: RegistroIn, request: Request, db: Session = Depends(get_db)):
 @router.post("/registro/reenviar", response_model=VerificacionOut, summary="CU44 · Reenviar el código (cada 60 s, máx. 3)")
 def reenviar(data: ReenviarIn, db: Session = Depends(get_db)):
     v = _verificacion(db, data.verificacion)
-    espera = SMS_ESPERA_SEG - int((utcnow() - v.fecha_ultimo_envio).total_seconds())
+    espera = COD_ESPERA_SEG - int((utcnow() - v.fecha_ultimo_envio).total_seconds())
     if espera > 0:
         raise ApiError(429, "RESEND_TOO_SOON", f"Espera {espera} segundos para pedir otro código.", {"espera_seg": espera})
-    if v.envios >= SMS_ENVIOS:
+    if v.envios >= COD_ENVIOS:
         raise ApiError(429, "RESEND_LIMIT", "Ya se enviaron 3 códigos. Vuelve a registrarte más tarde.")
+    codigo, codigo_hash = correo.nuevo_codigo()
     try:
-        v.codigo_hash, codigo = sms.enviar(v.telefono)
-    except sms.ErrorSms as e:
-        raise ApiError(502, "SMS_ERROR", f"No pudimos enviar el SMS: {e}")
+        correo.enviar_codigo(v.email, json.loads(v.datos).get("nombres", ""), codigo, COD_VIGENCIA_MIN)
+    except correo.ErrorCorreo as e:
+        raise ApiError(502, "EMAIL_ERROR", f"No pudimos enviar el correo con el código. {e}")
+    v.codigo_hash = codigo_hash
     v.envios, v.intentos, v.fecha_ultimo_envio = v.envios + 1, 0, utcnow()
-    v.fecha_expiracion = utcnow() + timedelta(minutes=SMS_VIGENCIA_MIN)
+    v.fecha_expiracion = utcnow() + timedelta(minutes=COD_VIGENCIA_MIN)
     db.commit()
     return _verif_out(v, data.verificacion, codigo)
 
 
 @router.post("/registro/confirmar", response_model=LoginOut, status_code=201,
-             summary="CU44 · Confirmar el código SMS y crear la cuenta (paso 2)")
+             summary="CU44 · Confirmar el código del correo y crear la cuenta (paso 2)")
 def confirmar(data: ConfirmarIn, request: Request, response: Response, db: Session = Depends(get_db)):
     v = _verificacion(db, data.verificacion)
-    try:
-        ok = sms.comprobar(v.telefono, data.codigo, v.codigo_hash)
-    except sms.ErrorSms as e:
-        raise ApiError(502, "SMS_ERROR", f"No pudimos validar el código: {e}")
-    if not ok:
+    if not correo.comprobar(data.codigo, v.codigo_hash):
         v.intentos += 1
-        if v.intentos >= SMS_INTENTOS:
+        if v.intentos >= COD_INTENTOS:
             v.estado = "bloqueada"
             db.commit()
             raise ApiError(429, "CODE_ATTEMPTS_EXCEEDED", "Superaste los 3 intentos. Vuelve a registrarte.")
         db.commit()
-        restantes = SMS_INTENTOS - v.intentos
+        restantes = COD_INTENTOS - v.intentos
         raise ApiError(422, "CODE_INVALID", f"Código incorrecto. Te quedan {restantes} intento{'s' if restantes > 1 else ''}.",
                        {"intentos_restantes": restantes})
     _ocupado(db, v.rut, v.email)  # alguien pudo registrarse con esos datos mientras tanto
@@ -383,7 +384,7 @@ def confirmar(data: ConfirmarIn, request: Request, response: Response, db: Sessi
     db.add(u)
     db.flush()
     db.add(UsuarioPerfil(id_usuario=u.id_usuario, codigo_perfil="familiar"))
-    db.add(CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta="familia", nombre=f"Familia {u.primer_apellido}",
+    db.add(CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta="familia", nombre=u.nombre,
                          email_facturacion=u.email, rut=u.rut))
     v.estado, v.fecha_verificacion, v.datos, v.codigo_hash = "verificada", now, "{}", None  # no se guarda la clave aquí
     portal.notificar(db, u.id_usuario, "sistema", "¡Bienvenido a AgeCare!",

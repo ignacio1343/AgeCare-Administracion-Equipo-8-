@@ -1,4 +1,4 @@
-# Portal web de familias (v0.6.0)
+# Portal web de familias (v0.6.1)
 
 Sitio web responsivo (computador y celular) en **`/portal`** del mismo dominio de la consola:
 <https://agecare-admin.onrender.com/portal>. Tiene tres vistas según el perfil de la cuenta. Una persona con más de
@@ -6,7 +6,7 @@ un perfil, por ejemplo representante y cuidadora, cambia de vista desde la cabec
 
 | Vista | Perfil en la app | Qué hace |
 |---|---|---|
-| **Representante** | `familiar` | Se registra solo (con código SMS), contrata y paga el plan de cada residente en Webpay, lo registra, cambia, renueva o cancela su plan, ve su **estado vital en tiempo real** (Platino y Proveedor) y recibe los **avisos de riesgo** en el portal y por WhatsApp (Dorado, Platino y Proveedor). |
+| **Representante** | `familiar` | Se registra solo (con código por correo), contrata y paga el plan de cada residente en Webpay, lo registra, cambia, renueva o cancela su plan, ve su **estado vital en tiempo real** (Platino y Proveedor) y recibe los **avisos de riesgo** en el portal y por WhatsApp (Dorado, Platino y Proveedor). |
 | **Residente** | `adulto_mayor` | Entra con su **correo o RUT**. Ve los **chistes, noticias y eventos** que publica el equipo en la consola y pide ayuda. No paga ni cambia planes. |
 | **Cuidador** | `cuidadora` | Registra la **ficha vital** de sus residentes asignados (**Normal / Alerta / Riesgoso** con una observación). Queda guardado quién y cuándo. |
 
@@ -31,7 +31,7 @@ entrar y se cierran las sesiones anteriores.
 Registro (correo, RUT, nombres y apellidos, teléfono con país, contraseña ×2, términos)
    │  ¿RUT o correo ya registrados? → «Inicia sesión o usa ¿Olvidaste tu contraseña?»
    ▼
-Código SMS de 6 dígitos (3 intentos, reenvío cada 60 s, máx. 3 envíos, vence en 10 min)
+Código de 6 dígitos al correo (3 intentos, reenvío cada 60 s, máx. 3 envíos, vence en 10 min)
    ▼
 Elige el plan → paga en Webpay Plus (o «Activar» si es Gratuito)
    ▼
@@ -111,19 +111,50 @@ botones «Pagar» y «Simular pago rechazado». Sigue el mismo camino de código
 (`WEBPAY_ENTORNO=produccion`, `WEBPAY_CODIGO_COMERCIO`, `WEBPAY_API_KEY` como secretos en Render) y el proceso de
 validación de Transbank.
 
-## SMS del registro (Twilio Verify)
+## Código del registro por correo (Brevo)
 
-Por defecto `SMS_MODO=simulado`: no se envía nada y el código aparece en pantalla con el aviso «Modo demostración».
-La API guarda solo el hash del código. Para enviar SMS reales:
+Al registrarse, el representante recibe un **código de 6 dígitos en su correo**. Es un correo real que llega a
+cualquier dirección. La API genera el código y guarda solo su hash.
 
-1. Crea una cuenta en <https://www.twilio.com/try-twilio>. La cuenta de prueba trae crédito y no pide tarjeta.
-2. *Verify → Services → Create new*: nombre `AgeCare`, canal SMS. Copia el **Service SID** (`VA…`).
-3. En la cuenta de prueba, agrega en *Phone Numbers → Verified Caller IDs* los celulares que recibirán el código.
-   Twilio solo envía a esos números hasta que la cuenta se actualice.
-4. En Render → `agecare-admin-api` → *Environment* (como *Secret*): `SMS_MODO=twilio`, `TWILIO_ACCOUNT_SID` (`AC…`),
-   `TWILIO_AUTH_TOKEN` y `TWILIO_VERIFY_SID`. No los pongas en GitHub ni en `render.yaml`.
+**Por qué Brevo y no Gmail directo:** el plan gratuito de Render bloquea los puertos SMTP (25, 465 y 587), así que un
+Gmail por SMTP no funciona desde la nube. Brevo envía por su API HTTPS y es gratis hasta 300 correos al día.
 
-Con Twilio, el código lo genera y lo valida Twilio. Los límites de 3 intentos y 60 segundos los aplica igual la API.
+**Configuración (una vez, unos 15 minutos):**
+
+1. Crea una cuenta gratuita en <https://www.brevo.com>. Usa el correo del equipo (por ejemplo, un Gmail del equipo) y
+   completa los datos de la empresa: Wellq Co / AgeCare.
+2. **Remitente**: arriba a la derecha → *Senders, Domains & Dedicated IPs* → *Senders* → **Add a sender**.
+   - Nombre `AgeCare` y el correo del equipo.
+   - Brevo envía un código o enlace a ese correo para verificarlo.
+3. **Clave de la API**: *SMTP & API* → pestaña *API Keys* → **Generate a new API key**.
+   - Nombre `agecare-render`.
+   - Copia la clave, que empieza con `xkeysib-`. Brevo no la vuelve a mostrar.
+4. **IP autorizadas**: *Security* → *Authorised IPs* → **desactiva el bloqueo de IP desconocidas**. Render cambia de
+   IP y, si el bloqueo queda activo, Brevo rechaza los envíos con el error 401.
+5. En Render → `agecare-admin-api` → **Environment** → *Add environment variable*:
+   - `BREVO_API_KEY` = la clave (márcala como *Secret*).
+   - `CORREO_REMITENTE` = el correo verificado en el paso 2.
+   - `CORREO_MODO=brevo` ya viene en `render.yaml`.
+
+   *Save changes*: la API se reinicia en 1 o 2 minutos.
+
+**Prueba**: abre `/portal/registro`, regístrate con tu correo y espera el correo «123456 es tu código de AgeCare».
+Si no aparece en unos minutos, revisa spam o promociones. Al usar un Gmail como remitente sin dominio propio, algunos
+correos se marcan como no deseados. Para producción conviene un dominio propio autenticado (DKIM) en Brevo.
+
+**Si falla**, el registro muestra el motivo:
+
+| Mensaje | Causa | Solución |
+|---|---|---|
+| «faltan BREVO_API_KEY o CORREO_REMITENTE» | Variables sin configurar en Render | Paso 5 |
+| «rechazó el envío (401 …)» | Clave mal copiada o IP bloqueada | Copia de nuevo la clave o haz el paso 4 |
+| «rechazó el envío (400 …)» | El remitente no está verificado | Paso 2 |
+
+En el entorno local y en el CI (`CORREO_MODO=simulado`), el código se muestra en pantalla con el aviso «Entorno de
+desarrollo», para poder probar sin enviar correos.
+
+El teléfono se sigue pidiendo en el registro, pero no se verifica: se usa para los avisos por WhatsApp. Verificarlo con
+SMS (por ejemplo, con Twilio Verify) queda como mejora para producción.
 
 ## Cuentas desde la consola (admin y soporte)
 
@@ -145,7 +176,7 @@ pasados dejan de mostrarse en el portal al día siguiente.
   revés. Si se reutiliza un refresh ya rotado, se revocan todas las sesiones de esa cuenta.
 - Contraseñas con Argon2id. Bloqueo de 15 minutos tras 5 intentos fallidos.
 - Límites contra abuso: 5 registros por teléfono y 10 por red cada hora, y 5 solicitudes de ayuda por hora.
-- La verificación SMS borra el hash de la contraseña de su registro temporal al confirmarse.
+- La verificación por correo borra el hash de la contraseña de su registro temporal al confirmarse.
 - El comprobante `/portal/pago/resultado` no exige sesión, porque Webpay vuelve desde otro sitio. El número de orden es
   aleatorio (64 bits) y solo muestra el resultado y los últimos 4 dígitos de la tarjeta.
 
@@ -158,7 +189,8 @@ pasados dejan de mostrarse en el portal al día siguiente.
 | Residente (Dorado) | `residente2@agecare.cl` · `5.123.456-1` | `Residente123!` |
 | Cuidador | `cuidador@agecare.cl` · `17.654.321-3` | `Cuidador123!` |
 
-La familia demo (Carolina con Rosa en Platino y Manuel en Dorado) tiene historial de la ficha vital, tres eventos
+Cada residente tiene su suscripción en la cuenta de su representante, con el mismo nombre y RUT que aparecen en
+*Usuarios de la app*: así *Planes y suscripciones* muestra a las mismas personas que la app. La familia demo (Carolina con Rosa en Platino y Manuel en Dorado) tiene historial de la ficha vital, tres eventos
 publicados y dos tickets que llegaron desde el portal. Para la demo en vivo: entra como **cuidador**, marca a Rosa como
 **Riesgoso** y, en otra ventana, como **representante**. El aviso aparece en segundos y, si el teléfono de Carolina es
 uno de la lista de Meta, también llega el WhatsApp.
@@ -168,7 +200,7 @@ uno de la lista de Meta, también llega el WhatsApp.
 | Método y ruta (`/api/v1/portal`) | Para qué |
 |---|---|
 | `GET /paises` · `GET /legales` | Prefijos telefónicos · términos y privacidad vigentes |
-| `POST /registro` · `/registro/reenviar` · `/registro/confirmar` | CU44 registro con código SMS |
+| `POST /registro` · `/registro/reenviar` · `/registro/confirmar` | CU44 registro con código por correo |
 | `POST /auth/login` · `/auth/refresh` · `/auth/logout` · `GET /auth/me` | CU45 sesión |
 | `POST /auth/cambiar-password` · `POST /auth/olvide` | Cambio de clave · CU46 ticket de contraseña |
 | `GET /planes` · `POST /representante/pagos` | CU47 contratar, CU49 cambiar o renovar |
@@ -188,7 +220,7 @@ Consola: `POST /usuarios` (CU54), `POST|DELETE /usuarios/{id}/residentes` (CU55)
 `backend/tests/test_portal.py` tiene 32 pruebas:
 
 - RUT y validaciones del registro.
-- Código SMS: intentos, reenvío, vencimiento y Twilio simulado.
+- Código por correo: intentos, reenvío, vencimiento, envío con Brevo y errores de Brevo.
 - Sesión: correo o RUT, refresh, reuso, bloqueo y separación de tokens entre consola y portal.
 - Pagos simulados y Webpay: aprobado, rechazado, anulado, tiempo agotado, monto alterado y Transbank caído.
 - Registro del residente, cambio, renovación y cancelación de plan.

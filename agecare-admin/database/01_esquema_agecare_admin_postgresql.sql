@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict VqZcX55SSTxceR6s0dfbfy0vmGfM59WhE9dmTAUP832Wn87ueAQmzyCu9il98WU
+\restrict i8WNJkv2LbCgmFeNlotBerGunZdIxauvQKwagAbnZEQepSgbrsI0CVu1C6yNWlx
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -1281,23 +1281,10 @@ CREATE TABLE public.usuario_perfil (
 
 
 --
--- Name: verificacion_salud; Type: TABLE; Schema: public; Owner: -
+-- Name: verificacion_correo; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.verificacion_salud (
-    codigo_componente character varying(40) NOT NULL,
-    fecha_hora timestamp with time zone NOT NULL,
-    exitosa boolean NOT NULL,
-    latencia_ms integer,
-    detalle character varying(300)
-);
-
-
---
--- Name: verificacion_sms; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.verificacion_sms (
+CREATE TABLE public.verificacion_correo (
     id_verificacion integer NOT NULL,
     token_hash character varying(64) NOT NULL,
     telefono character varying(20) NOT NULL,
@@ -1314,15 +1301,15 @@ CREATE TABLE public.verificacion_sms (
     fecha_expiracion timestamp with time zone NOT NULL,
     fecha_verificacion timestamp with time zone,
     ip character varying(45),
-    CONSTRAINT ck_sms_estado CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'verificada'::character varying, 'bloqueada'::character varying, 'expirada'::character varying])::text[])))
+    CONSTRAINT ck_verificacion_estado CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'verificada'::character varying, 'bloqueada'::character varying, 'expirada'::character varying])::text[])))
 );
 
 
 --
--- Name: verificacion_sms_id_verificacion_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: verificacion_correo_id_verificacion_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.verificacion_sms_id_verificacion_seq
+CREATE SEQUENCE public.verificacion_correo_id_verificacion_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1332,10 +1319,23 @@ CREATE SEQUENCE public.verificacion_sms_id_verificacion_seq
 
 
 --
--- Name: verificacion_sms_id_verificacion_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: verificacion_correo_id_verificacion_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.verificacion_sms_id_verificacion_seq OWNED BY public.verificacion_sms.id_verificacion;
+ALTER SEQUENCE public.verificacion_correo_id_verificacion_seq OWNED BY public.verificacion_correo.id_verificacion;
+
+
+--
+-- Name: verificacion_salud; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.verificacion_salud (
+    codigo_componente character varying(40) NOT NULL,
+    fecha_hora timestamp with time zone NOT NULL,
+    exitosa boolean NOT NULL,
+    latencia_ms integer,
+    detalle character varying(300)
+);
 
 
 --
@@ -1548,10 +1548,10 @@ ALTER TABLE ONLY public.usuario_app ALTER COLUMN id_usuario SET DEFAULT nextval(
 
 
 --
--- Name: verificacion_sms id_verificacion; Type: DEFAULT; Schema: public; Owner: -
+-- Name: verificacion_correo id_verificacion; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.verificacion_sms ALTER COLUMN id_verificacion SET DEFAULT nextval('public.verificacion_sms_id_verificacion_seq'::regclass);
+ALTER TABLE ONLY public.verificacion_correo ALTER COLUMN id_verificacion SET DEFAULT nextval('public.verificacion_correo_id_verificacion_seq'::regclass);
 
 
 --
@@ -2018,27 +2018,27 @@ ALTER TABLE ONLY public.usuario_perfil
 
 
 --
+-- Name: verificacion_correo verificacion_correo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verificacion_correo
+    ADD CONSTRAINT verificacion_correo_pkey PRIMARY KEY (id_verificacion);
+
+
+--
+-- Name: verificacion_correo verificacion_correo_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verificacion_correo
+    ADD CONSTRAINT verificacion_correo_token_hash_key UNIQUE (token_hash);
+
+
+--
 -- Name: verificacion_salud verificacion_salud_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.verificacion_salud
     ADD CONSTRAINT verificacion_salud_pkey PRIMARY KEY (codigo_componente, fecha_hora);
-
-
---
--- Name: verificacion_sms verificacion_sms_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.verificacion_sms
-    ADD CONSTRAINT verificacion_sms_pkey PRIMARY KEY (id_verificacion);
-
-
---
--- Name: verificacion_sms verificacion_sms_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.verificacion_sms
-    ADD CONSTRAINT verificacion_sms_token_hash_key UNIQUE (token_hash);
 
 
 --
@@ -2323,10 +2323,10 @@ CREATE UNIQUE INDEX ix_usuario_app_rut ON public.usuario_app USING btree (rut);
 
 
 --
--- Name: ix_verificacion_sms_rut; Type: INDEX; Schema: public; Owner: -
+-- Name: ix_verificacion_correo_rut; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX ix_verificacion_sms_rut ON public.verificacion_sms USING btree (rut);
+CREATE INDEX ix_verificacion_correo_rut ON public.verificacion_correo USING btree (rut);
 
 
 --
@@ -2805,5 +2805,5 @@ ALTER TABLE ONLY public.version_legal
 -- PostgreSQL database dump complete
 --
 
-\unrestrict VqZcX55SSTxceR6s0dfbfy0vmGfM59WhE9dmTAUP832Wn87ueAQmzyCu9il98WU
+\unrestrict i8WNJkv2LbCgmFeNlotBerGunZdIxauvQKwagAbnZEQepSgbrsI0CVu1C6yNWlx
 

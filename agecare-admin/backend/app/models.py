@@ -756,18 +756,18 @@ class SesionApp(Base):
     ip: Mapped[str | None] = mapped_column(String(45))
 
 
-class VerificacionSms(Base):
-    """Código enviado por SMS al registrarse un representante. Los datos del registro esperan aquí hasta confirmar."""
+class VerificacionCorreo(Base):
+    """Código enviado por correo al registrarse un representante. Los datos del registro esperan aquí hasta confirmar."""
 
-    __tablename__ = "verificacion_sms"
+    __tablename__ = "verificacion_correo"
     id_verificacion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # identificador que recibe el navegador
     telefono: Mapped[str] = mapped_column(String(20))
     rut: Mapped[str] = mapped_column(String(12), index=True)
     email: Mapped[str] = mapped_column(String(150))
     datos: Mapped[str] = mapped_column(Text)  # JSON: nombres, apellidos, hash de la contraseña, consentimientos
-    proveedor: Mapped[str] = mapped_column(String(20), default="simulado")  # simulado | twilio
-    codigo_hash: Mapped[str | None] = mapped_column(String(64))  # solo modo simulado (Twilio guarda su propio código)
+    proveedor: Mapped[str] = mapped_column(String(20), default="simulado")  # simulado | brevo
+    codigo_hash: Mapped[str | None] = mapped_column(String(64))  # hash SHA-256 del código (nunca el código)
     intentos: Mapped[int] = mapped_column(Integer, default=0)
     envios: Mapped[int] = mapped_column(Integer, default=1)
     estado: Mapped[str] = mapped_column(String(20), default="pendiente")
@@ -777,7 +777,7 @@ class VerificacionSms(Base):
     fecha_verificacion: Mapped[datetime | None] = mapped_column(UTCDateTime)
     ip: Mapped[str | None] = mapped_column(String(45))
     __table_args__ = (
-        CheckConstraint("estado IN ('pendiente', 'verificada', 'bloqueada', 'expirada')", name="ck_sms_estado"),
+        CheckConstraint("estado IN ('pendiente', 'verificada', 'bloqueada', 'expirada')", name="ck_verificacion_estado"),
     )
 
 

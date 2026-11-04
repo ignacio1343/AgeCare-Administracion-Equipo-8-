@@ -1,6 +1,6 @@
 # Base de datos · AgeCare Administración
 
-PostgreSQL 16 · 48 tablas (más `alembic_version`) · versión del esquema `0004_portal` (v0.6.0).
+PostgreSQL 16 · 48 tablas (más `alembic_version`) · versión del esquema `0005_correo` (v0.6.1).
 Los datos son ficticios (datos de demostración); no contienen información real de pacientes.
 
 ## Contenido

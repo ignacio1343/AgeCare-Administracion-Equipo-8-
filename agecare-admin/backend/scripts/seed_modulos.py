@@ -157,44 +157,7 @@ def cargar(db, rnd: random.Random | None = None) -> list[str]:
         hechos.append("cola de moderación")
 
     # ---------------------------------------------------------------- cuentas, suscripciones y pagos
-    if _vacia(db, CuentaCliente) and usuarios:
-        precios = {p.codigo_plan: p.precio for p in db.scalars(select(Plan))}
-        familiares = [u for u in usuarios if any(p.codigo_perfil == "familiar" for p in u.perfiles)]
-        cuid = [u for u in usuarios if any(p.codigo_perfil == "cuidadora" for p in u.perfiles)]
-        ctas = [(u, "familia", f"Familia {u.nombre.split()[-1]}", rnd.choice(["dorado", "dorado", "platino", "gratuito"])) for u in familiares[:10]]
-        ctas += [(cuid[0], "proveedor", "Cuidados Andes SpA", "proveedor")] if cuid else []
-        ctas += [(cuid[1], "proveedor", "Residencia Los Aromos", "proveedor")] if len(cuid) > 1 else []
-        n_tx = 0
-        for i, (u, tipo, nombre, plan) in enumerate(ctas):
-            inicio = now - timedelta(days=rnd.randint(40, 160))
-            c = CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta=tipo, nombre=nombre, email_facturacion=u.email,
-                              rut="76.543.210-3" if tipo == "proveedor" and i % 2 else None, fecha_creacion=inicio)
-            db.add(c)
-            db.flush()
-            estado = "activa"
-            if i == 3:
-                estado = "en_mora"
-            if i == 7:
-                estado = "cancelada"
-            meses = int((now - inicio).days // 30)
-            fin = inicio + timedelta(days=30 * (meses + 1))
-            s = Suscripcion(id_cuenta=c.id_cuenta, codigo_plan=plan, estado=estado, fecha_inicio=inicio,
-                            inicio_periodo=fin - timedelta(days=30), fin_periodo=fin, id_externo_pasarela=f"sub_demo_{c.id_cuenta}",
-                            fecha_cancelacion=now - timedelta(days=5) if estado == "cancelada" else None,
-                            motivo_cancelacion="El usuario se cambió de servicio." if estado == "cancelada" else None)
-            db.add(s)
-            db.flush()
-            if precios[plan] > 0:
-                for m in range(meses + 1):
-                    f = inicio + timedelta(days=30 * m)
-                    ultimo = m == meses
-                    rechazada = ultimo and estado == "en_mora"
-                    db.add(TransaccionPago(id_suscripcion=s.id_suscripcion, monto=precios[plan], estado="rechazada" if rechazada else "aprobada",
-                                           fecha=f, medio_pago=rnd.choice(["Visa ****4242", "Mastercard ****5100", "Redcompra ****0012"]),
-                                           codigo_error="fondos_insuficientes" if rechazada else None,
-                                           id_externo_pasarela=f"tx_demo_{s.id_suscripcion}_{m}"))
-                    n_tx += 1
-        hechos.append(f"{len(ctas)} cuentas de clientes y {n_tx} transacciones")
+    hechos += sincronizar_comercial(db, rnd, now)
 
     # ---------------------------------------------------------------- métricas agregadas (simuladas: vienen de la plataforma)
     if _vacia(db, MetricaDiaria):
@@ -400,4 +363,119 @@ def cargar_portal(db, now) -> list[str]:
         t.fecha_creacion = t.fecha_actualizacion = now - timedelta(hours=horas)
     db.flush()
     hechos.append("portal web (representante, 2 residentes, cuidador, ficha vital y tickets desde la app)")
+    return hechos
+
+
+# ---------------------------------------------------------------- v0.6.1 · planes con los mismos usuarios de la app
+PLANES_DEMO = [  # por residente demo (orden de alta): plan y estado de la suscripción
+    ("platino", "activa"), ("dorado", "activa"), ("platino", "activa"), ("gratuito", "activa"),
+    ("dorado", "en_mora"), ("platino", "activa"), ("dorado", "cancelada"), ("gratuito", "activa"),
+]
+
+
+def _rut_libre(db, base: int) -> str:
+    from app.rut import dv
+    n = base
+    while True:
+        r = f"{n}-{dv(str(n))}"
+        if not db.scalar(select(UsuarioApp.id_usuario).where(UsuarioApp.rut == r)) and \
+                not db.scalar(select(Paciente.id_paciente).where(Paciente.rut == r)):
+            return r
+        n += 1
+
+
+def _partes(nombre: str) -> tuple[str, str | None, str | None]:
+    p = [x for x in nombre.replace("Dra. ", "").replace("Dr. ", "").split() if x]
+    if len(p) == 1:
+        return p[0], None, None
+    if len(p) == 2:
+        return p[0], p[1], None
+    return " ".join(p[:-2]), p[-2], p[-1]
+
+
+def completar_identidad(db, rnd) -> int:
+    """Los usuarios y pacientes de la demo original no tenían RUT ni apellidos separados: se completan."""
+    n = 0
+    for u in db.scalars(select(UsuarioApp).where(UsuarioApp.rut.is_(None)).order_by(UsuarioApp.id_usuario)):
+        u.nombres, u.primer_apellido, u.segundo_apellido = _partes(u.nombre)
+        u.rut = _rut_libre(db, 12_000_000 + u.id_usuario * 104_729 % 9_000_000)
+        n += 1
+        db.flush()
+    for p in db.scalars(select(Paciente).where(Paciente.rut.is_(None)).order_by(Paciente.id_paciente)):
+        p.primer_nombre, p.primer_apellido, p.segundo_apellido = _partes(p.nombre)
+        p.rut = _rut_libre(db, 3_500_000 + p.id_paciente * 86_029 % 2_000_000)
+        p.fecha_nacimiento = p.fecha_nacimiento or date(rnd.randint(1934, 1950), rnd.randint(1, 12), rnd.randint(1, 28))
+        n += 1
+        db.flush()
+    return n
+
+
+def sincronizar_comercial(db, rnd, now) -> list[str]:
+    """Cuentas y suscripciones = los mismos usuarios de la app: una cuenta por representante (con su nombre y RUT) y
+    una suscripción por residente. Reemplaza, una sola vez, los datos comerciales inventados de versiones anteriores
+    (cuentas «Familia …» sin residente y cuentas de proveedor). No toca lo creado en el portal ni en la consola."""
+    from sqlalchemy import delete, or_, update
+
+    from app import portal
+    from app.models import EventoPago, MembresiaCirculo, OrdenPago, Reembolso
+    hechos = []
+    if completar_identidad(db, rnd):
+        hechos.append("RUT y apellidos de usuarios y pacientes demo")
+    antiguas = db.scalars(select(Suscripcion.id_suscripcion).join(CuentaCliente).where(or_(
+        Suscripcion.id_externo_pasarela.like("sub_demo_%"), CuentaCliente.tipo_cuenta == "proveedor"))).all()
+    if antiguas:
+        txs = select(TransaccionPago.id_transaccion).where(TransaccionPago.id_suscripcion.in_(antiguas))
+        db.execute(delete(Reembolso).where(Reembolso.id_transaccion.in_(txs)))
+        db.execute(update(EventoPago).where(EventoPago.id_transaccion.in_(txs)).values(id_transaccion=None))
+        db.execute(update(OrdenPago).where(OrdenPago.id_transaccion.in_(txs)).values(id_transaccion=None))
+        db.execute(update(OrdenPago).where(OrdenPago.id_suscripcion.in_(antiguas)).values(id_suscripcion=None))
+        db.execute(delete(TransaccionPago).where(TransaccionPago.id_suscripcion.in_(antiguas)))
+        db.execute(delete(Suscripcion).where(Suscripcion.id_suscripcion.in_(antiguas)))
+        con_subs = select(Suscripcion.id_cuenta)
+        db.execute(delete(CuentaCliente).where(CuentaCliente.id_cuenta.not_in(con_subs)))
+        db.flush()
+        hechos.append(f"reemplazadas {len(antiguas)} suscripciones demo antiguas")
+    construir = bool(antiguas) or _vacia(db, CuentaCliente)
+    n_sub = n_tx = 0
+    if construir:
+        precios = {p.codigo_plan: p.precio for p in db.scalars(select(Plan))}
+        sin_plan = db.scalars(select(Paciente).where(Paciente.id_paciente.not_in(
+            select(Suscripcion.id_paciente).where(Suscripcion.id_paciente.is_not(None)))).order_by(Paciente.id_paciente)).all()
+        for i, p in enumerate(sin_plan):
+            rep = db.scalar(select(UsuarioApp).join(MembresiaCirculo).where(
+                MembresiaCirculo.id_paciente == p.id_paciente, MembresiaCirculo.rol_en_circulo == "familiar",
+                MembresiaCirculo.estado == "activo").order_by(UsuarioApp.id_usuario).limit(1))
+            if rep is None:
+                continue
+            plan, estado = PLANES_DEMO[i % len(PLANES_DEMO)]
+            inicio = now - timedelta(days=rnd.randint(40, 160))
+            cuenta = portal.cuenta_familia(db, rep)
+            if cuenta.fecha_creacion > inicio:
+                cuenta.fecha_creacion = inicio
+            meses = int((now - inicio).days // 30)
+            fin = inicio + timedelta(days=30 * (meses + 1))
+            s = Suscripcion(id_cuenta=cuenta.id_cuenta, codigo_plan=plan, estado=estado, fecha_inicio=inicio,
+                            inicio_periodo=fin - timedelta(days=30), fin_periodo=fin, id_paciente=p.id_paciente,
+                            id_externo_pasarela=f"sub_seed_{p.id_paciente}",
+                            fecha_cancelacion=now - timedelta(days=5) if estado == "cancelada" else None,
+                            motivo_cancelacion="El representante dejó de usar el servicio." if estado == "cancelada" else None)
+            db.add(s)
+            db.flush()
+            n_sub += 1
+            if precios[plan] > 0:
+                for m in range(meses + 1 if estado != "cancelada" else meses):
+                    rechazada = m == meses and estado == "en_mora"
+                    db.add(TransaccionPago(id_suscripcion=s.id_suscripcion, monto=precios[plan],
+                                           estado="rechazada" if rechazada else "aprobada", fecha=inicio + timedelta(days=30 * m),
+                                           medio_pago=rnd.choice(["Webpay · tarjeta ****6623", "Webpay · tarjeta ****0568",
+                                                                  "Webpay · tarjeta ****7763"]),
+                                           codigo_error="webpay_-1" if rechazada else None,
+                                           id_externo_pasarela=f"tx_seed_{s.id_suscripcion}_{m}"))
+                    n_tx += 1
+        hechos.append(f"{n_sub} suscripciones (una por residente) y {n_tx} transacciones")
+    # Toda cuenta familiar lleva el nombre, el correo y el RUT de su titular, igual que en «Usuarios de la app»
+    for c in db.scalars(select(CuentaCliente).where(CuentaCliente.tipo_cuenta == "familia")):
+        if c.nombre != c.titular.nombre or (c.titular.rut and c.rut != c.titular.rut):
+            c.nombre, c.rut = c.titular.nombre, c.titular.rut or c.rut
+    db.flush()
     return hechos

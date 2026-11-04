@@ -1,4 +1,4 @@
-// Ingreso, registro del representante con código SMS, «¿Olvidaste tu contraseña?» y cambio de clave.
+// Ingreso, registro del representante con código por correo, «¿Olvidaste tu contraseña?» y cambio de clave.
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { errorDeCampo, papi, textoError, type Me } from './api'
@@ -97,7 +97,7 @@ export function Ingresar() {
 
 // ---------------------------------------------------------------- registro (2 pasos)
 interface Pais { codigo: string; prefijo: string; nombre: string; ejemplo: string }
-interface Verificacion { verificacion: string; telefono: string; modo: string; codigo_demo: string | null; reenviar_en_seg: number; intentos_restantes: number }
+interface Verificacion { verificacion: string; destino: string; modo: string; codigo_demo: string | null; reenviar_en_seg: number; intentos_restantes: number }
 interface Legal { tipo_documento: string; version: string; contenido: string }
 
 export function Registro() {
@@ -162,11 +162,11 @@ export function Registro() {
 
   if (v) {
     return (
-      <PaginaAcceso titulo="Confirma tu teléfono" sub={<>Te enviamos un código de 6 dígitos por SMS al <b>{v.telefono}</b>.</>}>
+      <PaginaAcceso titulo="Revisa tu correo" sub={<>Te enviamos un código de 6 dígitos a <b>{v.destino}</b>. Si no lo ves en unos minutos, revisa la carpeta de spam o promociones.</>}>
         <Pasos actual={2} />
         <form onSubmit={confirmar} className="p-form">
           {v.modo === 'simulado' && v.codigo_demo && (
-            <div className="p-alerta info"><b>Modo demostración:</b> no se envió un SMS real. Tu código es <code className="p-codigo">{v.codigo_demo}</code></div>
+            <div className="p-alerta info"><b>Entorno de desarrollo:</b> el envío de correos no está activo. Tu código es <code className="p-codigo">{v.codigo_demo}</code></div>
           )}
           {err !== null && <div className="p-alerta crit" role="alert">{textoError(err)}</div>}
           <Campo label="Código de verificación" hint={`Te quedan ${v.intentos_restantes} intento${v.intentos_restantes === 1 ? '' : 's'}. El código vence en 10 minutos.`}>
@@ -198,7 +198,7 @@ export function Registro() {
         <Campo label="Primer apellido" error={errorDeCampo(err, 'primer_apellido')}><input value={f.primer_apellido} onChange={set('primer_apellido')} autoComplete="family-name" required /></Campo>
         <Campo label="Segundo apellido" error={errorDeCampo(err, 'segundo_apellido')}><input value={f.segundo_apellido} onChange={set('segundo_apellido')} /></Campo>
         <Campo label="Correo" error={errorDeCampo(err, 'email')}><input type="email" value={f.email} onChange={set('email')} autoComplete="email" required /></Campo>
-        <Campo label="Teléfono celular" error={errorDeCampo(err, 'telefono')} hint={pais ? `Ejemplo: ${pais.prefijo} ${pais.ejemplo}` : undefined}>
+        <Campo label="Teléfono celular" error={errorDeCampo(err, 'telefono')} hint={pais ? `Ejemplo: ${pais.prefijo} ${pais.ejemplo}. Lo usamos para los avisos por WhatsApp.` : undefined}>
           <div className="p-telefono">
             <select value={f.pais} onChange={set('pais')} aria-label="País">
               {paises.map(p => <option key={p.codigo} value={p.codigo}>{p.nombre} ({p.prefijo})</option>)}
@@ -220,7 +220,7 @@ export function Registro() {
           <span>Autorizo recibir por WhatsApp avisos cuando el estado de salud de mi residente sea <b>riesgoso</b> (planes Dorado, Platino y Proveedor). Puedo retirarlo cuando quiera.</span>
         </label>
         <div className="full p-acciones">
-          <button className="p-btn primario grande" disabled={!listo || enviando}>{enviando ? 'Enviando código…' : 'Continuar: enviar código por SMS'}</button>
+          <button className="p-btn primario grande" disabled={!listo || enviando}>{enviando ? 'Enviando código…' : 'Continuar: enviar código a mi correo'}</button>
           <Link to="/portal/ingresar" className="p-centro">Ya tengo cuenta</Link>
         </div>
       </form>
@@ -238,7 +238,7 @@ export function Registro() {
 }
 
 function Pasos({ actual }: { actual: number }) {
-  const pasos = ['Tus datos', 'Código SMS', 'Plan y pago', 'Tu residente']
+  const pasos = ['Tus datos', 'Código por correo', 'Plan y pago', 'Tu residente']
   return (
     <ol className="p-pasos" aria-label="Pasos del registro">
       {pasos.map((p, i) => <li key={p} className={i + 1 < actual ? 'hecho' : i + 1 === actual ? 'actual' : ''}><span>{i + 1}</span>{p}</li>)}

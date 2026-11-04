@@ -41,7 +41,7 @@ Haz commit y push; Render aplica el cambio cuando el CI pase.
 
 | Prueba | Cómo | Resultado esperado |
 |---|---|---|
-| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.6.0"}` |
+| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.6.1"}` |
 | Base de datos | Abrir `https://agecare-admin-api.onrender.com/api/v1/health/db` | `{"status":"ok","db_ms":...}` |
 | Rewrite /api | Abrir `https://agecare-admin.onrender.com/api/v1/health` | La misma respuesta que la API |
 | Login | Abrir la consola e ingresar con `soporte@wellq.co.uk` / `Soporte123!` | Entra a Soporte |
@@ -115,8 +115,8 @@ número, *App secret* y webhook `https://agecare-admin-api.onrender.com/api/v1/w
 
 `render.yaml` publica el portal con **Webpay Plus en integración** (`PAGOS_MODO=webpay`, `WEBPAY_ENTORNO=integracion`,
 `API_PUBLIC_URL`), y la política CSP permite enviar el formulario de pago a Transbank. No hay secretos que configurar:
-las credenciales de integración son públicas. El SMS del registro queda **simulado** hasta agregar las variables de
-Twilio en el panel. Prueba: abre `/portal/registro`, regístrate y paga con la VISA 4051 8856 0044 6623 (CVV 123,
+las credenciales de integración son públicas. El código del registro se envía por correo con Brevo: agrega `BREVO_API_KEY` y `CORREO_REMITENTE`
+en el panel (ver `PORTAL.md`). Prueba: abre `/portal/registro`, regístrate y paga con la VISA 4051 8856 0044 6623 (CVV 123,
 RUT 11.111.111-1, clave 123). Ver [`PORTAL.md`](PORTAL.md).
 
 ## 7. Problemas frecuentes

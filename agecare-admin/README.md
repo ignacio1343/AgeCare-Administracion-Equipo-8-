@@ -1,4 +1,4 @@
-# AgeCare · Consola de Administración y Portal de familias — v0.6.0
+# AgeCare · Consola de Administración y Portal de familias — v0.6.1
 
 Portal web interno para que el equipo de Wellq Co opere la plataforma AgeCare. Este repositorio contiene el
 **Avance 2** comprometido en la Guía Fase 1 (seguridad, staff, auditoría y soporte) **y los módulos de los
@@ -13,7 +13,7 @@ pantalla y endpoint.
 | Base de datos | PostgreSQL 16 |
 | Seguridad | JWT (15 min, en memoria) + refresh token rotatorio (12 h) en cookie HttpOnly, Argon2id (parámetros OWASP), TOTP (2FA), control de acceso por rol |
 | Avisos al familiar | WhatsApp Business Cloud API de Meta (modo simulado por defecto), webhook firmado y reintentos |
-| Portal web de familias | `/portal` responsivo: representante (registro con SMS, Webpay Plus), residente y cuidador |
+| Portal web de familias | `/portal` responsivo: representante (registro con código por correo, Webpay Plus), residente y cuidador |
 | Integración continua | GitHub Actions: pruebas, cobertura, bandit, pip-audit, build, npm audit, Docker; carga (Locust) y OWASP ZAP a pedido |
 | Contenedores | Docker Compose (db + api + web con nginx) |
 | Publicación | Render (API Docker + sitio estático) y Neon (PostgreSQL) |
@@ -150,7 +150,7 @@ npm run dev                                             # http://localhost:5173
 Sitio responsivo para celular y computador, en <https://agecare-admin.onrender.com/portal>:
 
 - **Representante**: se registra con correo, RUT, nombres, apellidos, teléfono con país y contraseña repetida. Confirma
-  el teléfono con un **código SMS** y paga el plan de su residente en **Webpay Plus**. Después registra al residente,
+  su correo con un **código** que le llega por e-mail (Brevo) y paga el plan de su residente en **Webpay Plus**. Después registra al residente,
   cambia, renueva o cancela su plan, ve el **estado vital en tiempo real** (Platino y Proveedor) y recibe los **avisos
   de riesgo** en el portal y por WhatsApp (Dorado, Platino y Proveedor).
 - **Residente**: entra con correo o RUT y ve los chistes, noticias y **eventos** que publica el equipo.
@@ -158,7 +158,7 @@ Sitio responsivo para celular y computador, en <https://agecare-admin.onrender.c
 - Los botones **«¿Olvidaste tu contraseña?»** y **«Pedir ayuda»** crean tickets con canal *App* en *Soporte*.
 - Admin y soporte crean representantes, cuidadores y residentes en *Usuarios de la app* y les asignan residentes.
 
-Guía completa, cuentas demo, tarjetas de prueba de Webpay y configuración de Twilio: [`docs/PORTAL.md`](docs/PORTAL.md).
+Guía completa, cuentas demo, tarjetas de prueba de Webpay y configuración del correo (Brevo): [`docs/PORTAL.md`](docs/PORTAL.md).
 
 ## Avisos de salud por WhatsApp al familiar
 

@@ -68,7 +68,7 @@ def cuenta_familia(db: Session, u: UsuarioApp) -> CuentaCliente:
     c = db.scalar(select(CuentaCliente).where(CuentaCliente.id_usuario == u.id_usuario,
                                               CuentaCliente.tipo_cuenta == "familia").limit(1))
     if c is None:
-        c = CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta="familia", nombre=f"Familia {u.primer_apellido or u.nombre}",
+        c = CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta="familia", nombre=u.nombre,
                           email_facturacion=u.email, rut=u.rut)
         db.add(c)
         db.flush()
