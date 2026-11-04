@@ -732,3 +732,50 @@ def test_consola_ve_los_pagos_del_portal(client, auth):
 
 def test_legales_publicos(client):
     assert client.get(f"{P}/legales").json() == []  # sin versiones publicadas en la base de pruebas
+
+
+def _apps_script(monkeypatch, respuesta=b'{"ok": true, "restantes": 99}', error=None):
+    import json as _json
+    import urllib.request
+    st = get_settings()
+    monkeypatch.setattr(st, "correo_modo", "apps_script")
+    monkeypatch.setattr(st, "correo_script_url", "https://script.google.com/macros/s/AKfy-prueba/exec")
+    monkeypatch.setattr(st, "correo_script_clave", "clave-larga-del-equipo")
+    enviados = []
+
+    def urlopen(req, timeout):
+        if error:
+            raise error
+        enviados.append((req, _json.loads(req.data)))
+        return _Resp(respuesta)
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    return enviados
+
+
+def test_codigo_llega_por_correo_con_apps_script(client, monkeypatch):
+    enviados = _apps_script(monkeypatch)
+    v = client.post(f"{P}/registro", json=_datos()).json()
+    assert v["modo"] == "apps_script" and v["codigo_demo"] is None
+    req, cuerpo = enviados[0]
+    assert req.full_url.startswith("https://script.google.com/") and req.get_method() == "POST"
+    assert cuerpo["clave"] == "clave-larga-del-equipo" and cuerpo["para"] == "rep@example.com"
+    codigo = cuerpo["asunto"][:6]
+    assert codigo.isdigit() and codigo in cuerpo["html"] and codigo in cuerpo["texto"]
+    r = client.post(f"{P}/registro/confirmar", json={"verificacion": v["verificacion"], "codigo": codigo})
+    assert r.status_code == 201
+
+
+def test_apps_script_errores(client, monkeypatch):
+    import io
+    import urllib.error
+    monkeypatch.setattr(get_settings(), "correo_modo", "apps_script")
+    r = client.post(f"{P}/registro", json=_datos())
+    assert r.status_code == 502 and "CORREO_SCRIPT_URL" in r.json()["error"]["message"]
+    casos = [(dict(respuesta=b'{"ok": false, "error": "clave"}'), "la clave no coincide"),
+             (dict(respuesta=b"<html>Autoriza</html>"), "no respondió JSON"),
+             (dict(error=urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(b""))), "Cualquier"),
+             (dict(error=urllib.error.URLError("sin red")), "No se pudo conectar")]
+    for kw, texto in casos:
+        _apps_script(monkeypatch, **kw)
+        r = client.post(f"{P}/registro", json=_datos())
+        assert r.status_code == 502 and texto in r.json()["error"]["message"], r.text

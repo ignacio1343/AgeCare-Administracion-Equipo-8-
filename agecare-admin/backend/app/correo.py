@@ -1,11 +1,12 @@
 """Código de verificación por correo al registrarse un representante (actor secundario: servicio de correo).
 
-Se usa la API HTTPS de Brevo (antes Sendinblue) porque el plan gratuito de Render bloquea los puertos SMTP
-(25, 465 y 587): un Gmail por SMTP no funcionaría desde la nube. Brevo gratis: 300 correos al día a cualquier
-dirección, con un remitente verificado (puede ser el Gmail del equipo).
+El plan gratuito de Render bloquea los puertos SMTP (25, 465 y 587), así que el correo sale por HTTPS.
 
 Modos (`CORREO_MODO`):
-- «brevo»: envía el correo real. Requiere BREVO_API_KEY y CORREO_REMITENTE (correo verificado en Brevo).
+- «apps_script» (recomendado): un Google Apps Script publicado como aplicación web en el Gmail del equipo envía el
+  correo con MailApp (gratis, ~100 destinatarios al día en una cuenta Gmail). Requiere CORREO_SCRIPT_URL y
+  CORREO_SCRIPT_CLAVE (clave compartida que el script comprueba). Ver docs/PORTAL.md y docs/apps_script_correo.gs.
+- «brevo»: API HTTPS de Brevo. Requiere BREVO_API_KEY y CORREO_REMITENTE (correo verificado en Brevo).
 - «simulado»: no envía nada y devuelve el código; solo para el entorno local y las pruebas automáticas.
 La API genera el código y guarda solo su hash; el código nunca queda en los registros técnicos.
 """
@@ -28,7 +29,8 @@ class ErrorCorreo(Exception):
 
 
 def modo() -> str:
-    return "brevo" if get_settings().correo_modo.lower() == "brevo" else "simulado"
+    m = get_settings().correo_modo.lower()
+    return m if m in ("brevo", "apps_script") else "simulado"
 
 
 def enmascarar(email: str) -> str:
@@ -60,11 +62,44 @@ def _html(nombre: str, codigo: str, minutos: int) -> str:
 </div>"""
 
 
+def _apps_script(email: str, nombre: str, codigo: str, minutos: int) -> None:
+    st = get_settings()
+    if not st.correo_script_url.startswith("https://script.google.com/") or not st.correo_script_clave:
+        raise ErrorCorreo("El envío de correos no está configurado (faltan CORREO_SCRIPT_URL o CORREO_SCRIPT_CLAVE).")
+    cuerpo = {"clave": st.correo_script_clave, "para": email, "asunto": f"{codigo} es tu código de AgeCare",
+              "html": _html(nombre, codigo, minutos), "remitente": st.correo_remitente_nombre or "AgeCare",
+              "texto": f"Hola, {nombre}: tu código para confirmar tu cuenta en AgeCare es {codigo}. "
+                       f"Vence en {minutos} minutos."}
+    req = urllib.request.Request(st.correo_script_url, method="POST", data=json.dumps(cuerpo).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        # Solo URLs https://script.google.com/ (validado arriba). Google responde 302 y urllib sigue la redirección
+        with urllib.request.urlopen(req, timeout=20) as r:  # nosec B310
+            crudo = r.read()
+    except urllib.error.HTTPError as e:
+        raise ErrorCorreo(f"El script de Google respondió {e.code}. Revisa que la implementación sea «Cualquier "
+                          "usuario» y que la URL termine en /exec.") from None
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        raise ErrorCorreo(f"No se pudo conectar con el script de Google: {e}") from None
+    try:
+        resp = json.loads(crudo)
+    except ValueError:
+        raise ErrorCorreo("El script de Google no respondió JSON: revisa que esté implementado como «Aplicación web», "
+                          "con acceso «Cualquier usuario», y que autorizaste el envío de correos.") from None
+    if not resp.get("ok"):
+        motivo = {"clave": "la clave no coincide con CORREO_SCRIPT_CLAVE"}.get(resp.get("error"), resp.get("error"))
+        raise ErrorCorreo(f"El script de Google no envió el correo: {motivo}.")
+    log.info("código de registro enviado a %s (Apps Script; quedan %s envíos hoy)", enmascarar(email),
+             resp.get("restantes", "?"))
+
+
 def enviar_codigo(email: str, nombre: str, codigo: str, minutos: int) -> None:
-    """Envía el código por correo (modo brevo). En modo simulado no hace nada."""
-    if modo() != "brevo":
+    """Envía el código por correo (apps_script o brevo). En modo simulado no hace nada."""
+    if modo() == "simulado":
         log.info("correo simulado a %s", enmascarar(email))
         return
+    if modo() == "apps_script":
+        return _apps_script(email, nombre, codigo, minutos)
     st = get_settings()
     if not st.brevo_api_key or not st.correo_remitente:
         raise ErrorCorreo("El envío de correos no está configurado (faltan BREVO_API_KEY o CORREO_REMITENTE).")

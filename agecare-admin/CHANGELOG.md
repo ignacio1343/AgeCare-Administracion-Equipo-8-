@@ -1,5 +1,12 @@
 # Cambios
 
+## v0.6.2 · 04/11/2026 · Correo del registro desde el Gmail del equipo
+
+- El código del registro se envía con un **Google Apps Script** publicado en el Gmail del equipo
+  (`CORREO_MODO=apps_script`, `CORREO_SCRIPT_URL`, `CORREO_SCRIPT_CLAVE`). No necesita cuentas en servicios externos.
+  - El script está en `docs/apps_script_correo.gs` y la guía en `docs/PORTAL.md`.
+  - Brevo queda como alternativa.
+
 ## v0.6.1 · 04/11/2026 · Código del registro por correo y planes con los usuarios reales
 
 - **El código del registro llega por correo** (Brevo, API HTTPS, gratis hasta 300 al día). Reemplaza al SMS

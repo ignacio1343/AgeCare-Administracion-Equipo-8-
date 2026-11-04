@@ -31,7 +31,7 @@ async def lifespan(_app):
 app = FastAPI(
     lifespan=lifespan,
     title="AgeCare · API de la Consola de Administración",
-    version="0.6.1",
+    version="0.6.2",
     description="Consola de administración AgeCare: acceso y auditoría, soporte, usuarios de la app, estado operativo, contenidos, moderación, dashboards, planes y suscripciones, configuración y legales, avisos de salud por WhatsApp al familiar y portal web del representante, el residente y el cuidador (registro con código por correo, Webpay Plus, ficha vital).",
     docs_url=f"{API}/docs", openapi_url=f"{API}/openapi.json", redoc_url=None,
 )

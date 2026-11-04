@@ -53,9 +53,11 @@ class Settings(BaseSettings):
     plataforma_api_key: str = ""
 
     # Portal web (representante, residente y cuidador) · ver docs/PORTAL.md
-    # Código por correo al registrarse: «brevo» (correo real por la API HTTPS de Brevo; Render gratis bloquea SMTP)
-    # o «simulado» (solo local y pruebas: el código se muestra en pantalla)
-    correo_modo: str = "simulado"
+    # Código por correo al registrarse. Render gratis bloquea SMTP, así que el correo sale por HTTPS:
+    # «apps_script» (un Apps Script en el Gmail del equipo lo envía), «brevo» (API de Brevo) o «simulado» (local y pruebas)
+    correo_modo: str = "simulado"             # apps_script (Gmail del equipo) | brevo | simulado
+    correo_script_url: str = ""                # URL de la implementación web del Apps Script (termina en /exec)
+    correo_script_clave: str = ""              # clave compartida con el script (la misma que CLAVE en el script)
     brevo_api_key: str = ""
     correo_remitente: str = ""                 # correo verificado como remitente en Brevo (p. ej. el Gmail del equipo)
     correo_remitente_nombre: str = "AgeCare"
@@ -75,7 +77,7 @@ class Settings(BaseSettings):
 
     @field_validator("whatsapp_modo", "whatsapp_token", "whatsapp_phone_number_id", "whatsapp_api_version",
                      "whatsapp_plantilla", "whatsapp_idioma", "whatsapp_app_secret", "whatsapp_verify_token",
-                     "whatsapp_waba_id", "plataforma_api_key", "correo_modo", "brevo_api_key",
+                     "whatsapp_waba_id", "plataforma_api_key", "correo_modo", "correo_script_url", "correo_script_clave", "brevo_api_key",
                      "correo_remitente", "pagos_modo", "webpay_entorno", "webpay_codigo_comercio",
                      "webpay_api_key", "api_public_url")
     @classmethod

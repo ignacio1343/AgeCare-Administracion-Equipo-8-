@@ -47,10 +47,10 @@ services:
         value: integracion
       - key: API_PUBLIC_URL     # Webpay devuelve al navegador a esta API tras el pago
         value: https://agecare-admin-api.onrender.com
-      - key: CORREO_MODO        # código del registro por correo real (API HTTPS de Brevo; Render gratis bloquea SMTP)
-        value: brevo
-      # BREVO_API_KEY (secreta) y CORREO_REMITENTE (correo verificado en Brevo) se agregan en el panel de Render.
-      # Ver docs/PORTAL.md → «Código del registro por correo (Brevo)».
+      - key: CORREO_MODO        # código del registro por correo real, enviado por un Apps Script del Gmail del equipo
+        value: apps_script      # (Render gratis bloquea SMTP; el script envía por HTTPS)
+      # CORREO_SCRIPT_URL y CORREO_SCRIPT_CLAVE (secreta) se agregan en el panel de Render.
+      # Ver docs/PORTAL.md → «Código del registro por correo».
 
   # Consola (SPA React) como sitio estático en la CDN de Render
   - type: web

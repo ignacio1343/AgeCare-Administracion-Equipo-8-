@@ -1,4 +1,4 @@
-# Portal web de familias (v0.6.1)
+# Portal web de familias (v0.6.2)
 
 Sitio web responsivo (computador y celular) en **`/portal`** del mismo dominio de la consola:
 <https://agecare-admin.onrender.com/portal>. Tiene tres vistas según el perfil de la cuenta. Una persona con más de
@@ -111,50 +111,58 @@ botones «Pagar» y «Simular pago rechazado». Sigue el mismo camino de código
 (`WEBPAY_ENTORNO=produccion`, `WEBPAY_CODIGO_COMERCIO`, `WEBPAY_API_KEY` como secretos en Render) y el proceso de
 validación de Transbank.
 
-## Código del registro por correo (Brevo)
+## Código del registro por correo
 
-Al registrarse, el representante recibe un **código de 6 dígitos en su correo**. Es un correo real que llega a
-cualquier dirección. La API genera el código y guarda solo su hash.
+Al registrarse, el representante recibe un **código de 6 dígitos en su correo**. Es un correo real, enviado desde el
+**Gmail del equipo**, y le llega a cualquier dirección. La API genera el código y guarda solo su hash.
 
-**Por qué Brevo y no Gmail directo:** el plan gratuito de Render bloquea los puertos SMTP (25, 465 y 587), así que un
-Gmail por SMTP no funciona desde la nube. Brevo envía por su API HTTPS y es gratis hasta 300 correos al día.
+**Cómo se envía:** el plan gratuito de Render bloquea SMTP, así que la API no puede conectarse directo a Gmail. Por eso
+llama por HTTPS a un **Google Apps Script** publicado en la cuenta Gmail del equipo, y el script envía el correo con
+`MailApp`. Es gratis, no necesita registrarse en otro servicio y una cuenta Gmail permite unos 100 destinatarios al día.
 
-**Configuración (una vez, unos 15 minutos):**
+**Configuración (10 minutos, una vez, con la cuenta Gmail del equipo):**
 
-1. Crea una cuenta gratuita en <https://www.brevo.com>. Usa el correo del equipo (por ejemplo, un Gmail del equipo) y
-   completa los datos de la empresa: Wellq Co / AgeCare.
-2. **Remitente**: arriba a la derecha → *Senders, Domains & Dedicated IPs* → *Senders* → **Add a sender**.
-   - Nombre `AgeCare` y el correo del equipo.
-   - Brevo envía un código o enlace a ese correo para verificarlo.
-3. **Clave de la API**: *SMTP & API* → pestaña *API Keys* → **Generate a new API key**.
-   - Nombre `agecare-render`.
-   - Copia la clave, que empieza con `xkeysib-`. Brevo no la vuelve a mostrar.
-4. **IP autorizadas**: *Security* → *Authorised IPs* → **desactiva el bloqueo de IP desconocidas**. Render cambia de
-   IP y, si el bloqueo queda activo, Brevo rechaza los envíos con el error 401.
-5. En Render → `agecare-admin-api` → **Environment** → *Add environment variable*:
-   - `BREVO_API_KEY` = la clave (márcala como *Secret*).
-   - `CORREO_REMITENTE` = el correo verificado en el paso 2.
-   - `CORREO_MODO=brevo` ya viene en `render.yaml`.
+1. Entra a <https://script.google.com> con el Gmail del equipo → **Nuevo proyecto**. Ponle de nombre `AgeCare correo`.
+2. Borra lo que trae el editor y pega todo el archivo [`apps_script_correo.gs`](apps_script_correo.gs).
+3. En la línea `const CLAVE = '…'`, reemplaza el texto entre comillas por una **frase larga inventada**, solo con
+   letras, números y guiones. Ejemplo: `agecare-correo-k39x7q2m`. Guarda con el ícono 💾.
+4. **Prueba**: arriba, en la lista de funciones, elige **probar** → **Ejecutar**. Google pide permisos:
+   - Elige tu cuenta.
+   - Si aparece «Google no verificó esta app», ve a **Configuración avanzada** → **Ir a AgeCare correo (no seguro)**
+     → **Permitir**. Es tu propio script.
+   - Te llega un correo «123456 es tu código de AgeCare (prueba)».
+5. **Implementar** (arriba a la derecha) → **Nueva implementación** → ícono ⚙ → **Aplicación web**:
+   - Descripción: `AgeCare v1`.
+   - Ejecutar como: **Yo (tu correo)**.
+   - Quién tiene acceso: **Cualquier usuario**.
+   - **Implementar** y copia la **URL de la aplicación web**, que termina en `/exec`.
+6. En Render → `agecare-admin-api` → **Environment** → *Add environment variable*:
+   - `CORREO_SCRIPT_URL` = la URL del paso 5.
+   - `CORREO_SCRIPT_CLAVE` = la misma frase del paso 3 (márcala como *Secret*).
+   - `CORREO_MODO=apps_script` ya viene en `render.yaml`.
 
-   *Save changes*: la API se reinicia en 1 o 2 minutos.
+   *Save changes*.
 
-**Prueba**: abre `/portal/registro`, regístrate con tu correo y espera el correo «123456 es tu código de AgeCare».
-Si no aparece en unos minutos, revisa spam o promociones. Al usar un Gmail como remitente sin dominio propio, algunos
-correos se marcan como no deseados. Para producción conviene un dominio propio autenticado (DKIM) en Brevo.
+Sin la clave, el script no envía nada. No lee el correo de la cuenta: solo envía el código.
+
+**Si después cambias el script**, usa **Implementar → Gestionar implementaciones → ✏ → Versión: Nueva versión** para
+que la URL siga siendo la misma.
 
 **Si falla**, el registro muestra el motivo:
 
 | Mensaje | Causa | Solución |
 |---|---|---|
-| «faltan BREVO_API_KEY o CORREO_REMITENTE» | Variables sin configurar en Render | Paso 5 |
-| «rechazó el envío (401 …)» | Clave mal copiada o IP bloqueada | Copia de nuevo la clave o haz el paso 4 |
-| «rechazó el envío (400 …)» | El remitente no está verificado | Paso 2 |
+| «faltan CORREO_SCRIPT_URL o CORREO_SCRIPT_CLAVE» | Variables sin configurar en Render | Paso 6 |
+| «la clave no coincide» | La clave del script y la de Render son distintas | Cópialas iguales |
+| «no respondió JSON» o «respondió 403» | La implementación no es *Aplicación web* con acceso *Cualquier usuario*, o falta autorizar | Pasos 4 y 5 |
+
+**Alternativa:** también se puede enviar con la API de Brevo (`CORREO_MODO=brevo`, `BREVO_API_KEY` y
+`CORREO_REMITENTE`) si el equipo tiene una cuenta de Brevo.
 
 En el entorno local y en el CI (`CORREO_MODO=simulado`), el código se muestra en pantalla con el aviso «Entorno de
-desarrollo», para poder probar sin enviar correos.
+desarrollo».
 
-El teléfono se sigue pidiendo en el registro, pero no se verifica: se usa para los avisos por WhatsApp. Verificarlo con
-SMS (por ejemplo, con Twilio Verify) queda como mejora para producción.
+El teléfono se sigue pidiendo en el registro, pero no se verifica: se usa para los avisos por WhatsApp.
 
 ## Cuentas desde la consola (admin y soporte)
 
@@ -220,7 +228,7 @@ Consola: `POST /usuarios` (CU54), `POST|DELETE /usuarios/{id}/residentes` (CU55)
 `backend/tests/test_portal.py` tiene 32 pruebas:
 
 - RUT y validaciones del registro.
-- Código por correo: intentos, reenvío, vencimiento, envío con Brevo y errores de Brevo.
+- Código por correo: intentos, reenvío, vencimiento, envío con el Apps Script de Gmail y con Brevo, y sus errores.
 - Sesión: correo o RUT, refresh, reuso, bloqueo y separación de tokens entre consola y portal.
 - Pagos simulados y Webpay: aprobado, rechazado, anulado, tiempo agotado, monto alterado y Transbank caído.
 - Registro del residente, cambio, renovación y cancelación de plan.
