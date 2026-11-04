@@ -25,7 +25,7 @@ Tiempo estimado: 30 a 45 minutos. Todo es gratuito y no pide tarjeta.
    - `agecare-admin` (static site).
 3. Render pide `DATABASE_URL`: pega la cadena de Neon. `JWT_SECRET` y `PASARELA_WEBHOOK_SECRET` se generan solos.
 4. *Apply*. El primer despliegue de la API tarda 5 a 10 minutos: construye la imagen, aplica las migraciones
-   (43 tablas) y carga los datos demo.
+   (48 tablas) y carga los datos demo.
 
 ### Si Render asigna otro nombre a los servicios
 
@@ -41,7 +41,7 @@ Haz commit y push; Render aplica el cambio cuando el CI pase.
 
 | Prueba | Cómo | Resultado esperado |
 |---|---|---|
-| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.5.1"}` |
+| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.6.0"}` |
 | Base de datos | Abrir `https://agecare-admin-api.onrender.com/api/v1/health/db` | `{"status":"ok","db_ms":...}` |
 | Rewrite /api | Abrir `https://agecare-admin.onrender.com/api/v1/health` | La misma respuesta que la API |
 | Login | Abrir la consola e ingresar con `soporte@wellq.co.uk` / `Soporte123!` | Entra a Soporte |
@@ -111,6 +111,14 @@ llamar a Meta. Para enviar mensajes reales sigue [`WHATSAPP.md`](WHATSAPP.md): p
 número, *App secret* y webhook `https://agecare-admin-api.onrender.com/api/v1/whatsapp/webhook`.
 `PLATAFORMA_API_KEY` la genera Render; cópiala desde *Environment* para la Plataforma AgeCare.
 
+## 6 ter. Portal de familias y Webpay
+
+`render.yaml` publica el portal con **Webpay Plus en integración** (`PAGOS_MODO=webpay`, `WEBPAY_ENTORNO=integracion`,
+`API_PUBLIC_URL`), y la política CSP permite enviar el formulario de pago a Transbank. No hay secretos que configurar:
+las credenciales de integración son públicas. El SMS del registro queda **simulado** hasta agregar las variables de
+Twilio en el panel. Prueba: abre `/portal/registro`, regístrate y paga con la VISA 4051 8856 0044 6623 (CVV 123,
+RUT 11.111.111-1, clave 123). Ver [`PORTAL.md`](PORTAL.md).
+
 ## 7. Problemas frecuentes
 
 | Síntoma | Causa probable | Solución |
@@ -120,6 +128,8 @@ número, *App secret* y webhook `https://agecare-admin-api.onrender.com/api/v1/w
 | Login correcto pero al recargar vuelve al login | La cookie no llega (dominios distintos) | Usa el rewrite de `/api/*`. Si no se puede, define `VITE_API_URL` con la URL de la API en el sitio estático, `COOKIE_SAMESITE=none` en la API y agrega la URL de la consola a `CORS_ORIGINS` |
 | La primera carga tarda cerca de 1 minuto | El plan gratuito suspendió la API | Normal; abre la consola unos minutos antes de una demo |
 | Render no despliega después de un push | El CI falló (`checksPass`) | Revisa el error en GitHub → *Actions* y corrígelo |
+| Al volver de Webpay sale «No recibimos el resultado del pago» | `API_PUBLIC_URL` no apunta a la API | Corrígela en `render.yaml` o en *Environment* |
+| Al pagar, el navegador no abre Webpay | Falta Transbank en `form-action` de la CSP | Revisa la cabecera `Content-Security-Policy` del sitio estático en `render.yaml` |
 | Swagger (`/api/v1/docs`) no carga desde la URL de la consola | La política de seguridad (CSP) del sitio estático bloquea los scripts externos | Ábrelo directo en la URL de la API |
 
 ## 8. Reiniciar los datos demo

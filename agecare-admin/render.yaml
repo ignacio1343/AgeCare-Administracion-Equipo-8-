@@ -40,6 +40,15 @@ services:
       # Ver docs/WHATSAPP.md.
       - key: PLATAFORMA_API_KEY # clave con la que la Plataforma AgeCare informa eventos de salud
         generateValue: true
+      # Portal web (v0.6.0) · ver docs/PORTAL.md
+      - key: PAGOS_MODO         # webpay = Transbank Webpay Plus (entorno de integración: tarjetas de prueba)
+        value: webpay
+      - key: WEBPAY_ENTORNO
+        value: integracion
+      - key: API_PUBLIC_URL     # Webpay devuelve al navegador a esta API tras el pago
+        value: https://agecare-admin-api.onrender.com
+      # SMS del registro: sin SMS_MODO es «simulado» (el código se muestra en pantalla). Para SMS reales,
+      # SMS_MODO=twilio y TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN y TWILIO_VERIFY_SID en el panel de Render.
 
   # Consola (SPA React) como sitio estático en la CDN de Render
   - type: web
@@ -72,4 +81,4 @@ services:
         value: strict-origin-when-cross-origin
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        value: "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://webpay3gint.transbank.cl https://webpay3g.transbank.cl"

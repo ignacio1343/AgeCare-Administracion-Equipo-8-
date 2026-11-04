@@ -6,7 +6,9 @@ de implementación (hash de contraseña, secretos, contadores de bloqueo).
 """
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text, UniqueConstraint
+from datetime import date
+
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base, UTCDateTime, utcnow
@@ -137,6 +139,18 @@ class UsuarioApp(Base):
     telefono: Mapped[str | None] = mapped_column(String(20))  # formato E.164, p. ej. +56912345678
     whatsapp_habilitado: Mapped[bool] = mapped_column(Boolean, default=False)  # consentimiento expreso (Ley 19.628)
     whatsapp_verificado: Mapped[datetime | None] = mapped_column(UTCDateTime)  # fecha del consentimiento
+    # Portal web (v0.6.0): identidad y acceso propio del representante, el residente y el cuidador
+    rut: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)  # normalizado: 12345678-K
+    nombres: Mapped[str | None] = mapped_column(String(80))
+    primer_apellido: Mapped[str | None] = mapped_column(String(60))
+    segundo_apellido: Mapped[str | None] = mapped_column(String(60))
+    password_hash: Mapped[str | None] = mapped_column(String(255))  # física
+    debe_cambiar_password: Mapped[bool] = mapped_column(Boolean, default=False)  # física: clave temporal de soporte
+    intentos_fallidos: Mapped[int] = mapped_column(Integer, default=0)  # física
+    bloqueado_hasta: Mapped[datetime | None] = mapped_column(UTCDateTime)  # física
+    fecha_aceptacion_terminos: Mapped[datetime | None] = mapped_column(UTCDateTime)  # Ley 19.628
+    id_version_terminos: Mapped[int | None] = mapped_column(ForeignKey("version_legal.id_version"))
+    origen: Mapped[str] = mapped_column(String(20), default="plataforma")  # plataforma | portal | consola
 
     perfiles: Mapped[list["UsuarioPerfil"]] = relationship(lazy="selectin")
     membresias: Mapped[list["MembresiaCirculo"]] = relationship(lazy="selectin")
@@ -152,11 +166,19 @@ class UsuarioPerfil(Base):
 
 
 class Paciente(Base):
+    """MER: ADULTO_MAYOR (residente). Su cuenta de acceso al portal es un usuario_app con perfil adulto_mayor."""
+
     __tablename__ = "paciente"
     id_paciente: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(120))
     estado: Mapped[str] = mapped_column(String(30), default="activo")
     fecha_alta: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    rut: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)
+    primer_nombre: Mapped[str | None] = mapped_column(String(60))
+    primer_apellido: Mapped[str | None] = mapped_column(String(60))
+    segundo_apellido: Mapped[str | None] = mapped_column(String(60))
+    fecha_nacimiento: Mapped["date | None"] = mapped_column(Date)
+    id_usuario: Mapped[int | None] = mapped_column(ForeignKey("usuario_app.id_usuario"), unique=True)  # cuenta del residente
 
 
 class MembresiaCirculo(Base):
@@ -249,7 +271,7 @@ class EncuestaSatisfaccion(Base):
 # ===========================================================================
 # SPRINT 3 · Estado operativo y alertas
 # ===========================================================================
-from datetime import date  # noqa: E402
+# (date se importa al inicio del módulo)
 
 from sqlalchemy import Date, Numeric  # noqa: E402
 
@@ -423,6 +445,8 @@ class Contenido(Base):
     tipo: Mapped[str] = mapped_column(String(20))
     titulo: Mapped[str] = mapped_column(String(160))
     cuerpo: Mapped[str] = mapped_column(Text)
+    fecha_evento: Mapped[datetime | None] = mapped_column(UTCDateTime)  # solo tipo «evento»
+    lugar: Mapped[str | None] = mapped_column(String(160))  # solo tipo «evento»
     etiquetas: Mapped[str | None] = mapped_column(String(400))  # separadas por coma
     estado: Mapped[str] = mapped_column(String(30), default="borrador")
     fecha_programada: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -430,7 +454,7 @@ class Contenido(Base):
     fecha_creacion: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)  # física
     fecha_eliminacion: Mapped[datetime | None] = mapped_column(UTCDateTime)  # física: borrado lógico
     __table_args__ = (
-        CheckConstraint("tipo IN ('chiste', 'noticia')", name="ck_contenido_tipo"),
+        CheckConstraint("tipo IN ('chiste', 'noticia', 'evento')", name="ck_contenido_tipo"),
         CheckConstraint(_in("estado", ESTADOS_PUBLICACION), name="ck_contenido_estado"),
     )
 
@@ -558,10 +582,13 @@ class Suscripcion(Base):
     fecha_cancelacion: Mapped[datetime | None] = mapped_column(UTCDateTime)
     motivo_cancelacion: Mapped[str | None] = mapped_column(String(300))
     id_externo_pasarela: Mapped[str | None] = mapped_column(String(100))
+    # Portal: cada residente tiene su propia suscripción (vacío mientras el representante no lo registra)
+    id_paciente: Mapped[int | None] = mapped_column(ForeignKey("paciente.id_paciente"), index=True)
     __table_args__ = (CheckConstraint("estado IN ('activa', 'en_mora', 'cancelada', 'vencida')", name="ck_suscripcion_estado"),)
 
     cuenta: Mapped[CuentaCliente] = relationship(lazy="joined")
     plan: Mapped[Plan] = relationship(lazy="joined")
+    paciente: Mapped[Paciente | None] = relationship(lazy="joined")
 
 
 class TransaccionPago(Base):
@@ -707,3 +734,115 @@ class VersionLegal(Base):
     )
 
     autor: Mapped[MiembroStaff] = relationship(lazy="joined")
+
+
+# ===========================================================================
+# v0.6.0 · Portal web del representante, el residente y el cuidador
+# ===========================================================================
+ESTADOS_VITALES = ("normal", "alerta", "riesgoso")
+
+
+class SesionApp(Base):
+    """Sesión del portal (refresh token rotativo, igual que SESION_STAFF pero para usuarios de la app)."""
+
+    __tablename__ = "sesion_app"
+    id_sesion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuario_app.id_usuario"), index=True)
+    refresh_token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    fecha_inicio: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    fecha_expiracion: Mapped[datetime] = mapped_column(UTCDateTime)
+    fecha_revocacion: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    motivo_revocacion: Mapped[str | None] = mapped_column(String(30))
+    ip: Mapped[str | None] = mapped_column(String(45))
+
+
+class VerificacionSms(Base):
+    """Código enviado por SMS al registrarse un representante. Los datos del registro esperan aquí hasta confirmar."""
+
+    __tablename__ = "verificacion_sms"
+    id_verificacion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # identificador que recibe el navegador
+    telefono: Mapped[str] = mapped_column(String(20))
+    rut: Mapped[str] = mapped_column(String(12), index=True)
+    email: Mapped[str] = mapped_column(String(150))
+    datos: Mapped[str] = mapped_column(Text)  # JSON: nombres, apellidos, hash de la contraseña, consentimientos
+    proveedor: Mapped[str] = mapped_column(String(20), default="simulado")  # simulado | twilio
+    codigo_hash: Mapped[str | None] = mapped_column(String(64))  # solo modo simulado (Twilio guarda su propio código)
+    intentos: Mapped[int] = mapped_column(Integer, default=0)
+    envios: Mapped[int] = mapped_column(Integer, default=1)
+    estado: Mapped[str] = mapped_column(String(20), default="pendiente")
+    fecha_creacion: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    fecha_ultimo_envio: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    fecha_expiracion: Mapped[datetime] = mapped_column(UTCDateTime)
+    fecha_verificacion: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    ip: Mapped[str | None] = mapped_column(String(45))
+    __table_args__ = (
+        CheckConstraint("estado IN ('pendiente', 'verificada', 'bloqueada', 'expirada')", name="ck_sms_estado"),
+    )
+
+
+class RegistroVital(Base):
+    """Ficha del residente: estado vital que informa el cuidador (quién y cuándo)."""
+
+    __tablename__ = "registro_vital"
+    id_registro: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_paciente: Mapped[int] = mapped_column(ForeignKey("paciente.id_paciente"), index=True)
+    id_usuario_cuidador: Mapped[int] = mapped_column(ForeignKey("usuario_app.id_usuario"), index=True)
+    estado: Mapped[str] = mapped_column(String(20))
+    observacion: Mapped[str] = mapped_column(String(1000))
+    fecha: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    id_alerta: Mapped[int | None] = mapped_column(ForeignKey("alerta.id_alerta"))
+    __table_args__ = (CheckConstraint("estado IN ('normal', 'alerta', 'riesgoso')", name="ck_registro_vital_estado"),)
+
+    cuidador: Mapped[UsuarioApp] = relationship(lazy="joined")
+    paciente: Mapped[Paciente] = relationship(lazy="joined")
+
+
+class NotificacionApp(Base):
+    """Aviso dentro del portal (campana del representante)."""
+
+    __tablename__ = "notificacion_app"
+    id_notificacion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuario_app.id_usuario"), index=True)
+    id_paciente: Mapped[int | None] = mapped_column(ForeignKey("paciente.id_paciente"))
+    tipo: Mapped[str] = mapped_column(String(30))
+    titulo: Mapped[str] = mapped_column(String(160))
+    cuerpo: Mapped[str] = mapped_column(String(1000))
+    fecha_creacion: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    fecha_lectura: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    __table_args__ = (
+        CheckConstraint("tipo IN ('estado_riesgoso', 'alerta_salud', 'pago', 'plan', 'sistema')", name="ck_notificacion_tipo"),
+    )
+
+
+class OrdenPago(Base):
+    """Compra iniciada en el portal y enviada a la pasarela (Webpay Plus). Al aprobarse crea la TRANSACCION_PAGO."""
+
+    __tablename__ = "orden_pago"
+    id_orden: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    orden_compra: Mapped[str] = mapped_column(String(26), unique=True)  # buy_order de Webpay (máx. 26)
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuario_app.id_usuario"), index=True)
+    id_suscripcion: Mapped[int | None] = mapped_column(ForeignKey("suscripcion.id_suscripcion"))
+    id_paciente: Mapped[int | None] = mapped_column(ForeignKey("paciente.id_paciente"))  # alta para un residente existente
+    codigo_plan: Mapped[str] = mapped_column(ForeignKey("plan.codigo_plan"))
+    tipo: Mapped[str] = mapped_column(String(20))  # alta | renovacion | cambio
+    monto: Mapped[int] = mapped_column(Integer)
+    proveedor: Mapped[str] = mapped_column(String(20))  # webpay | simulado
+    estado: Mapped[str] = mapped_column(String(20), default="iniciada", index=True)
+    token: Mapped[str | None] = mapped_column(String(100), unique=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    fecha_confirmacion: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    codigo_autorizacion: Mapped[str | None] = mapped_column(String(20))
+    tarjeta: Mapped[str | None] = mapped_column(String(10))  # últimos 4 dígitos
+    tipo_pago: Mapped[str | None] = mapped_column(String(10))  # VD débito, VN crédito…
+    codigo_respuesta: Mapped[int | None] = mapped_column(Integer)
+    detalle: Mapped[str | None] = mapped_column(String(300))
+    id_transaccion: Mapped[int | None] = mapped_column(ForeignKey("transaccion_pago.id_transaccion"))
+    __table_args__ = (
+        CheckConstraint("tipo IN ('alta', 'renovacion', 'cambio')", name="ck_orden_tipo"),
+        CheckConstraint("estado IN ('iniciada', 'aprobada', 'rechazada', 'anulada', 'error')", name="ck_orden_estado"),
+        CheckConstraint("monto > 0", name="ck_orden_monto"),
+    )
+
+    plan: Mapped[Plan] = relationship(lazy="joined")
+    usuario: Mapped[UsuarioApp] = relationship(lazy="joined")

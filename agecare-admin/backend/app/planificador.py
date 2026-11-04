@@ -37,12 +37,25 @@ def cerrar_tickets_resueltos(db) -> int:
     return len(tickets)
 
 
+def anular_ordenes_abandonadas(db) -> int:
+    """Órdenes de pago del portal que siguen «iniciadas» después de 30 minutos (el usuario cerró Webpay)."""
+    from .models import OrdenPago
+    limite = utcnow() - timedelta(minutes=30)
+    ordenes = db.scalars(select(OrdenPago).where(OrdenPago.estado == "iniciada", OrdenPago.fecha_creacion <= limite)).all()
+    for o in ordenes:
+        o.estado, o.fecha_confirmacion, o.detalle = "anulada", utcnow(), "Sin respuesta de la pasarela en 30 minutos."
+    db.commit()
+    return len(ordenes)
+
+
 def tick(n: int) -> None:
     from .routers.contenido import publicar_programados
     with SessionLocal() as db:
         ejecutar_ciclo(db)
         publicar_programados(db)
         procesar_whatsapp(db)
+        if n % 10 == 0:
+            anular_ordenes_abandonadas(db)
         if n % 60 == 0:
             cerrar_tickets_resueltos(db)
             consolidar_soporte(db)

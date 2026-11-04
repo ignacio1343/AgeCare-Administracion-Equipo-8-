@@ -2,6 +2,7 @@
 · CU11 Gestionar suscripciones · CU12 Cancelar suscripción · CU13 Consultar transacciones · CU14 Registrar evento de pago
 · CU15 Procesar reembolso."""
 import json
+import uuid
 import re
 from datetime import datetime, timedelta
 from typing import Literal
@@ -64,6 +65,7 @@ class SuscripcionOut(BaseModel):
     fin_periodo: datetime
     fecha_cancelacion: datetime | None
     motivo_cancelacion: str | None
+    residente: str | None = None
 
 
 class CuentaOut(BaseModel):
@@ -184,7 +186,8 @@ def sus_out(s: Suscripcion) -> SuscripcionOut:
                           tipo_cuenta=s.cuenta.tipo_cuenta, codigo_plan=s.codigo_plan, plan=s.plan.nombre,
                           precio=s.plan.precio, estado=s.estado, fecha_inicio=s.fecha_inicio,
                           inicio_periodo=s.inicio_periodo, fin_periodo=s.fin_periodo,
-                          fecha_cancelacion=s.fecha_cancelacion, motivo_cancelacion=s.motivo_cancelacion)
+                          fecha_cancelacion=s.fecha_cancelacion, motivo_cancelacion=s.motivo_cancelacion,
+                          residente=s.paciente.nombre if s.paciente else None)
 
 
 def _actual(db: Session, id_cuenta: int) -> Suscripcion | None:
@@ -461,10 +464,10 @@ class WebhookOut(BaseModel):
     error: str | None
 
 
-@router.post("/pagos/webhook", response_model=WebhookOut, summary="CU14 · Registrar evento de pago (webhook firmado)")
-async def webhook(request: Request, x_pasarela_firma: str | None = Header(None), db: Session = Depends(get_db)):
-    cuerpo = await request.body()
-    if not pasarela.firma_valida(cuerpo, x_pasarela_firma):
+def procesar_webhook(db: Session, cuerpo: bytes, firma: str | None, request: Request) -> WebhookOut:
+    """Procesa un evento de la pasarela: valida la firma, ignora duplicados y actualiza transacción y suscripción.
+    Lo usan el webhook real y el botón «Simular pago» de la consola (mismo camino de código)."""
+    if not pasarela.firma_valida(cuerpo, firma):
         raise ApiError(401, "INVALID_SIGNATURE", "Firma del webhook inválida.")
     try:
         data = WebhookIn.model_validate_json(cuerpo)
@@ -499,3 +502,74 @@ async def webhook(request: Request, x_pasarela_firma: str | None = Header(None),
               despues={"tipo": data.tipo, "procesado": ev.procesado, "error": ev.error_procesamiento}, request=request)
     db.commit()
     return WebhookOut(recibido=True, duplicado=False, procesado=ev.procesado, error=ev.error_procesamiento)
+
+
+@router.post("/pagos/webhook", response_model=WebhookOut, summary="CU14 · Registrar evento de pago (webhook firmado)")
+async def webhook(request: Request, x_pasarela_firma: str | None = Header(None), db: Session = Depends(get_db)):
+    return procesar_webhook(db, await request.body(), x_pasarela_firma, request)
+
+
+class SimularPagoIn(BaseModel):
+    resultado: Literal["aprobado", "rechazado"] = "aprobado"
+    monto: int | None = Field(None, ge=0, description="Por defecto, el precio del plan")
+
+
+class SimularPagoOut(WebhookOut):
+    id_evento: str
+    id_transaccion: int | None
+    estado_suscripcion: str
+
+
+@router.post("/comercial/suscripciones/{id_suscripcion}/simular-pago", response_model=SimularPagoOut, status_code=201,
+             summary="Demo · Simular que la pasarela informa un pago (webhook firmado)")
+def simular_pago(id_suscripcion: int, data: SimularPagoIn, request: Request, staff: MiembroStaff = Depends(ESCRITURA),
+                 db: Session = Depends(get_db)):
+    s = obtener(db, Suscripcion, id_suscripcion, "La suscripción")
+    if not s.id_externo_pasarela:
+        raise ApiError(409, "NO_GATEWAY_ID", "La suscripción no tiene identificador en la pasarela.")
+    if s.plan.precio == 0 and data.monto is None:
+        raise ApiError(409, "FREE_PLAN", "El plan gratuito no genera cobros.")
+    evento = f"evt_sim_{uuid.uuid4().hex[:12]}"
+    cuerpo = json.dumps({
+        "id_evento": evento, "tipo": f"pago.{data.resultado}", "id_suscripcion_externa": s.id_externo_pasarela,
+        "id_transaccion_externa": f"tx_sim_{uuid.uuid4().hex[:12]}",
+        "monto": data.monto if data.monto is not None else s.plan.precio, "medio_pago": "Visa ****4242 (simulado)",
+        "codigo_error": "fondos_insuficientes" if data.resultado == "rechazado" else None,
+    }).encode()
+    registrar(db, actor=staff, accion="pago.simulado", tipo_entidad="suscripcion", id_entidad=id_suscripcion,
+              despues={"resultado": data.resultado, "id_evento": evento}, request=request)
+    out = procesar_webhook(db, cuerpo, pasarela.firmar(cuerpo), request)  # firmado igual que la pasarela real
+    ev = db.scalar(select(EventoPago).where(EventoPago.id_externo_evento == evento))
+    db.refresh(s)
+    return SimularPagoOut(**out.model_dump(), id_evento=evento, id_transaccion=ev.id_transaccion if ev else None,
+                          estado_suscripcion=s.estado)
+
+
+# ---------------------------------------------------------------- v0.6 · pagos iniciados en el portal (Webpay Plus)
+class OrdenPortalOut(BaseModel):
+    orden_compra: str
+    representante: str
+    plan: str
+    tipo: str
+    monto: int
+    proveedor: str
+    estado: str
+    tarjeta: str | None
+    codigo_autorizacion: str | None
+    detalle: str | None
+    fecha_creacion: datetime
+    fecha_confirmacion: datetime | None
+
+
+@router.get("/comercial/ordenes-portal", response_model=Page[OrdenPortalOut],
+            summary="Pagos iniciados por los representantes en el portal (Webpay)")
+def ordenes_portal(estado: str | None = None, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100),
+                   _: MiembroStaff = Depends(LECTURA), db: Session = Depends(get_db)):
+    from ..models import OrdenPago
+    stmt = select(OrdenPago)
+    if estado:
+        stmt = stmt.where(OrdenPago.estado == estado)
+    return paginar(db, stmt.order_by(OrdenPago.fecha_creacion.desc()), page, page_size, lambda o: OrdenPortalOut(
+        orden_compra=o.orden_compra, representante=o.usuario.nombre, plan=o.plan.nombre, tipo=o.tipo, monto=o.monto,
+        proveedor=o.proveedor, estado=o.estado, tarjeta=o.tarjeta, codigo_autorizacion=o.codigo_autorizacion,
+        detalle=o.detalle, fecha_creacion=o.fecha_creacion, fecha_confirmacion=o.fecha_confirmacion))

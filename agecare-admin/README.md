@@ -1,4 +1,4 @@
-# AgeCare · Consola de Administración — v0.5.1 (Sprints 1 a 6)
+# AgeCare · Consola de Administración y Portal de familias — v0.6.0
 
 Portal web interno para que el equipo de Wellq Co opere la plataforma AgeCare. Este repositorio contiene el
 **Avance 2** comprometido en la Guía Fase 1 (seguridad, staff, auditoría y soporte) **y los módulos de los
@@ -13,6 +13,7 @@ pantalla y endpoint.
 | Base de datos | PostgreSQL 16 |
 | Seguridad | JWT (15 min, en memoria) + refresh token rotatorio (12 h) en cookie HttpOnly, Argon2id (parámetros OWASP), TOTP (2FA), control de acceso por rol |
 | Avisos al familiar | WhatsApp Business Cloud API de Meta (modo simulado por defecto), webhook firmado y reintentos |
+| Portal web de familias | `/portal` responsivo: representante (registro con SMS, Webpay Plus), residente y cuidador |
 | Integración continua | GitHub Actions: pruebas, cobertura, bandit, pip-audit, build, npm audit, Docker; carga (Locust) y OWASP ZAP a pedido |
 | Contenedores | Docker Compose (db + api + web con nginx) |
 | Publicación | Render (API Docker + sitio estático) y Neon (PostgreSQL) |
@@ -144,11 +145,26 @@ npm run dev                                             # http://localhost:5173
 > ¿Sin PostgreSQL a mano? Para una prueba rápida, en `.env` usa `DATABASE_URL=sqlite:///./agecare.db`
 > y salta `alembic upgrade head` (el seed crea las tablas).
 
+## Portal web de familias (`/portal`)
+
+Sitio responsivo para celular y computador, en <https://agecare-admin.onrender.com/portal>:
+
+- **Representante**: se registra con correo, RUT, nombres, apellidos, teléfono con país y contraseña repetida. Confirma
+  el teléfono con un **código SMS** y paga el plan de su residente en **Webpay Plus**. Después registra al residente,
+  cambia, renueva o cancela su plan, ve el **estado vital en tiempo real** (Platino y Proveedor) y recibe los **avisos
+  de riesgo** en el portal y por WhatsApp (Dorado, Platino y Proveedor).
+- **Residente**: entra con correo o RUT y ve los chistes, noticias y **eventos** que publica el equipo.
+- **Cuidador**: registra la ficha vital (**Normal / Alerta / Riesgoso** con observación).
+- Los botones **«¿Olvidaste tu contraseña?»** y **«Pedir ayuda»** crean tickets con canal *App* en *Soporte*.
+- Admin y soporte crean representantes, cuidadores y residentes en *Usuarios de la app* y les asignan residentes.
+
+Guía completa, cuentas demo, tarjetas de prueba de Webpay y configuración de Twilio: [`docs/PORTAL.md`](docs/PORTAL.md).
+
 ## Avisos de salud por WhatsApp al familiar
 
 Cuando un paciente tiene un signo vital en rojo, una caída o un SOS, la consola avisa por WhatsApp a sus familiares
-del círculo de cuidado que dieron su consentimiento, si el plan del paciente lo incluye (Platino y Proveedor por
-defecto). Pantalla **Avisos WhatsApp** (bitácora, indicadores, reintento y simulador de eventos) y consentimiento en
+del círculo de cuidado que dieron su consentimiento, si el plan del paciente lo incluye (Dorado, Platino y
+Proveedor). También avisa cuando el cuidador registra el estado **Riesgoso** en el portal. Pantalla **Avisos WhatsApp** (bitácora, indicadores, reintento y simulador de eventos) y consentimiento en
 la ficha de **Usuarios de la app**. Funciona en modo simulado sin cuentas externas; para enviar mensajes reales con
 Meta sigue [`docs/WHATSAPP.md`](docs/WHATSAPP.md).
 
@@ -181,6 +197,10 @@ cerca de 1 minuto en despertar; Neon suspende la base tras 5 minutos sin uso. No
 | editora@wellq.co.uk | Editora123! | Editor de contenido | Contenidos y productos (sin acceso a soporte) |
 | moderador@wellq.co.uk | Moderador123! | Moderador | Moderación |
 
+**Portal de familias** (`/portal`, entran con correo o RUT): `representante@agecare.cl` / `Portal123!`,
+`residente@agecare.cl` / `Residente123!`, `residente2@agecare.cl` / `Residente123!` y `cuidador@agecare.cl` /
+`Cuidador123!`. Ver [`docs/PORTAL.md`](docs/PORTAL.md).
+
 El admin tiene el segundo factor *requerido* pero aún no configurado: la consola muestra un aviso y lo puede
 activar en «Mi cuenta». Una vez activo, el login le pedirá el código de 6 dígitos.
 
@@ -191,8 +211,8 @@ muestra el enlace de activación (válido 24 h) para copiarlo.
 
 ```bash
 cd backend
-pytest                                   # 81 pruebas (12 unitarias, 40 de integración y 29 de avisos WhatsApp), sobre SQLite
-pytest --cov=app                         # con cobertura (90 %)
+pytest                                   # 116 pruebas (unitarias, integración, avisos WhatsApp y 32 del portal), sobre SQLite
+pytest --cov=app                         # con cobertura (92 %)
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/agecare_test pytest   # sobre PostgreSQL
 ```
 

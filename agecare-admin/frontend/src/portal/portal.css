@@ -1,0 +1,227 @@
+/* Portal web de familias: responsivo (celular primero), letra más grande y contraste alto (adultos mayores). */
+.p-shell, .p-acceso { --p-bg: #f5f3ef; --p-surface: #fff; --p-ink: #1d2430; --p-soft: #556070; --p-faint: #87909c; --p-line: #e6e1d8;
+  --p-brand: #2f63c8; --p-brand-ink: #224a9a; --p-brand-soft: #e8eefb; --p-accent: #e8774a;
+  --p-ok: #137a35; --p-ok-bg: #e7f5ec; --p-warn: #9a6400; --p-warn-bg: #fdf2d8; --p-crit: #c22f2f; --p-crit-bg: #fde8e6;
+  --p-radius: 18px; --p-shadow: 0 1px 2px rgba(29,36,48,.05), 0 10px 30px rgba(29,36,48,.07);
+  font-size: 16px; color: var(--p-ink); line-height: 1.45 }
+.p-shell { min-height: 100vh; display: flex; flex-direction: column; background: var(--p-bg) }
+.p-shell h1 { font-size: 26px; letter-spacing: -.01em; line-height: 1.2 } .p-shell h2 { font-size: 19px; line-height: 1.25 }
+.p-sub { color: var(--p-soft); margin-top: 4px } .p-muted { color: var(--p-faint) } .small { font-size: 13px }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px }
+
+/* ---------- cabecera */
+.p-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--p-line) }
+.p-marca { display: flex; align-items: center; gap: 10px; color: var(--p-ink); text-decoration: none }
+.p-marca b { display: block; font-size: 17px; line-height: 1.1 } .p-marca small { display: block; font-size: 12px; color: var(--p-faint) }
+.p-logo { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 18px;
+  background: linear-gradient(135deg, var(--p-brand), #5b8ce6) }
+.p-spacer { flex: 1 }
+.p-vistas { display: flex; gap: 4px; background: var(--p-bg); padding: 4px; border-radius: 12px }
+.p-vistas a { padding: 7px 12px; border-radius: 9px; color: var(--p-soft); font-weight: 600; font-size: 14px; text-decoration: none }
+.p-vistas a.active { background: #fff; color: var(--p-brand-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08) }
+.p-quien { display: flex; flex-direction: column; text-align: right; line-height: 1.2 } .p-quien small { color: var(--p-faint); font-size: 12px }
+.p-main { flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 24px 20px 48px }
+.p-footer { text-align: center; color: var(--p-faint); font-size: 13px; padding: 18px }
+.p-footer a { color: var(--p-brand-ink) }
+
+/* ---------- campana */
+.p-campana { position: relative }
+.p-icono { position: relative; border: 1px solid var(--p-line); background: #fff; width: 42px; height: 42px; border-radius: 12px; font-size: 19px; cursor: pointer }
+.p-badge { position: absolute; top: -6px; right: -6px; background: var(--p-crit); color: #fff; font-size: 11px; font-weight: 700; min-width: 20px; height: 20px;
+  border-radius: 10px; display: grid; place-items: center; padding: 0 5px; border: 2px solid #fff }
+.p-avisos { position: absolute; right: 0; top: 50px; width: min(360px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; background: #fff;
+  border: 1px solid var(--p-line); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.18); padding: 12px }
+.p-avisos-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 10px }
+.p-aviso { border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: var(--p-bg); font-size: 14px }
+.p-aviso.nueva { box-shadow: inset 3px 0 0 var(--p-brand) } .p-aviso.estado_riesgoso, .p-aviso.alerta_salud { background: var(--p-crit-bg) }
+.p-aviso.estado_riesgoso.nueva, .p-aviso.alerta_salud.nueva { box-shadow: inset 3px 0 0 var(--p-crit) }
+.p-aviso p { margin: 2px 0 } .p-aviso small { color: var(--p-faint) }
+
+/* ---------- botones y formularios */
+.p-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; border-radius: 12px; padding: 10px 16px;
+  font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; text-decoration: none; transition: background .15s, transform .05s; min-height: 44px }
+.p-btn:active:not(:disabled) { transform: translateY(1px) } .p-btn:disabled { opacity: .5; cursor: not-allowed }
+.p-btn.primario { background: var(--p-brand); color: #fff } .p-btn.primario:hover:not(:disabled) { background: var(--p-brand-ink) }
+.p-btn.ghost { background: #fff; border-color: #d6d0c4; color: var(--p-ink) } .p-btn.ghost:hover:not(:disabled) { background: var(--p-bg) }
+.p-btn.peligro { color: var(--p-crit) } .p-btn.peligro-lleno { background: var(--p-crit); color: #fff }
+.p-btn.blanco { background: #fff; color: var(--p-crit) }
+.p-btn.grande { padding: 14px 20px; font-size: 17px; width: 100%; min-height: 52px } .p-btn.sm { padding: 6px 12px; min-height: 36px; font-size: 14px }
+.p-link { background: none; border: none; font: inherit; color: var(--p-brand-ink); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px }
+.p-link:disabled { color: var(--p-faint); text-decoration: none; cursor: default }
+.p-form { display: flex; flex-direction: column; gap: 14px }
+.p-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px } .p-grid2 .full { grid-column: 1 / -1 }
+.p-campo { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 15px }
+.p-campo input, .p-campo select, .p-campo textarea, .p-telefono select, .p-telefono input, .p-cancelar input {
+  font: inherit; font-weight: 400; font-size: 16px; padding: 12px 14px; border: 1.5px solid #d6d0c4; border-radius: 12px; background: #fff; color: var(--p-ink); width: 100%; min-height: 48px }
+.p-campo textarea { resize: vertical }
+.p-campo input:focus, .p-campo select:focus, .p-campo textarea:focus, .p-telefono input:focus, .p-telefono select:focus {
+  outline: 3px solid rgba(47,99,200,.25); border-color: var(--p-brand) }
+.p-campo small { font-weight: 400; color: var(--p-faint); font-size: 13px }
+.p-campo.con-error input, .p-campo.con-error select { border-color: var(--p-crit) } .p-error-campo { color: var(--p-crit) !important }
+.p-telefono { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px }
+.p-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; color: var(--p-soft); cursor: pointer }
+.p-check input { width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px; accent-color: var(--p-brand) }
+.p-checks { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--p-faint) }
+.p-checks li::before { content: '○ ' } .p-checks li.ok { color: var(--p-ok) } .p-checks li.ok::before { content: '✔ ' }
+.p-otp { font-size: 30px !important; letter-spacing: .45em; text-align: center; font-family: ui-monospace, monospace !important }
+.p-codigo { font-size: 20px; font-weight: 700; letter-spacing: .2em; background: #fff; padding: 2px 8px; border-radius: 8px }
+.p-acciones { display: flex; flex-direction: column; gap: 10px; align-items: stretch }
+.p-acciones-fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px }
+.p-acciones-col { display: flex; flex-direction: column; gap: 10px }
+.p-centro { text-align: center; display: block } .p-fila-centro { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap }
+.p-volver { display: inline-block; margin-top: 18px; font-weight: 600 }
+
+/* ---------- avisos */
+.p-alerta { border-radius: 14px; padding: 12px 16px; font-size: 15px; border: 1px solid; margin-bottom: 12px }
+.p-form .p-alerta, .p-grid2 .p-alerta { margin-bottom: 0 }
+.p-alerta.crit { background: var(--p-crit-bg); color: #8c1f1f; border-color: #f4c8c2 }
+.p-alerta.ok { background: var(--p-ok-bg); color: #0c5a26; border-color: #c4e6cf }
+.p-alerta.warn { background: var(--p-warn-bg); color: #6f4800; border-color: #f0dca8 }
+.p-alerta.info { background: var(--p-brand-soft); color: var(--p-brand-ink); border-color: #cbd9f4 }
+.p-alerta.neutral { background: #f1efea; color: var(--p-soft); border-color: var(--p-line) }
+.p-alerta.grande { padding: 16px 18px; box-shadow: inset 5px 0 0 var(--p-crit) } .p-alerta.grande b { font-size: 17px } .p-alerta.grande p { margin: 4px 0 }
+.p-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap }
+.p-chip.ok { background: var(--p-ok-bg); color: var(--p-ok) } .p-chip.warn { background: var(--p-warn-bg); color: var(--p-warn) }
+.p-chip.crit { background: var(--p-crit-bg); color: var(--p-crit) }
+
+/* ---------- acceso (ingresar / registro) */
+.p-acceso { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 32px 16px;
+  background: radial-gradient(1200px 600px at 10% -10%, #dfe8fb 0%, transparent 60%), radial-gradient(900px 500px at 110% 10%, #fde4d6 0%, transparent 55%), var(--p-bg) }
+.p-acceso-card { width: 100%; max-width: 440px; background: #fff; border-radius: 24px; box-shadow: var(--p-shadow); padding: 28px; display: flex; flex-direction: column; gap: 16px; margin: auto 0 }
+.p-acceso-card.ancho { max-width: 720px }
+.p-acceso-card h1 { font-size: 26px; line-height: 1.2 }
+.p-separador { display: flex; align-items: center; gap: 10px; color: var(--p-faint); font-size: 14px }
+.p-separador::before, .p-separador::after { content: ''; flex: 1; height: 1px; background: var(--p-line) }
+.p-pasos { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px }
+.p-pasos li { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12.5px; color: var(--p-faint); text-align: center }
+.p-pasos li span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #ece8e0; font-weight: 700; font-size: 13px }
+.p-pasos li.actual { color: var(--p-brand-ink); font-weight: 700 } .p-pasos li.actual span { background: var(--p-brand); color: #fff }
+.p-pasos li.hecho span { background: var(--p-ok); color: #fff } .p-pasos li.hecho span::after { content: '' }
+.p-shell .p-pasos { max-width: 560px; margin: 0 auto 18px }
+.p-modal { position: fixed; inset: 0; background: rgba(20,24,32,.5); display: grid; place-items: center; padding: 16px; z-index: 50 }
+.p-modal-card { background: #fff; border-radius: 20px; padding: 22px; max-width: 640px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 14px }
+.p-legal { overflow: auto; white-space: pre-wrap; font-size: 14px; line-height: 1.6; background: var(--p-bg); border-radius: 12px; padding: 14px }
+
+/* ---------- tarjetas y títulos */
+.p-titulo { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 18px; flex-wrap: wrap }
+.p-tarjeta { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-radius); box-shadow: var(--p-shadow); padding: 20px; margin-bottom: 16px }
+.p-tarjeta.angosta { max-width: 520px; width: 100% } .p-tarjeta h1 + .p-sub { margin-bottom: 14px }
+.p-centrado { display: flex; justify-content: center }
+.p-vacio { text-align: center; padding: 36px 20px } .p-vacio-ico { font-size: 44px } .p-vacio p { color: var(--p-soft); margin: 8px auto 16px; max-width: 420px }
+.p-vacio .p-btn { max-width: 320px }
+.p-cargando { padding: 48px; text-align: center; color: var(--p-faint) }
+.p-kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; font-size: 15px; margin: 12px 0 }
+.p-kv dt { color: var(--p-faint) } .p-kv dd { font-weight: 600 } .p-kv dd small { font-weight: 400; color: var(--p-faint) }
+.p-kv.comprobante { background: var(--p-bg); padding: 14px; border-radius: 14px; margin: 0 }
+.p-total { font-size: 22px }
+
+/* ---------- representante */
+.p-residentes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 16px }
+.p-residente { margin-bottom: 0; position: relative; overflow: hidden }
+.p-residente.crit { border-color: #f1b9b3; box-shadow: inset 0 4px 0 var(--p-crit), var(--p-shadow) }
+.p-residente.warn { box-shadow: inset 0 4px 0 #e5b134, var(--p-shadow) } .p-residente.ok { box-shadow: inset 0 4px 0 #3aa65d, var(--p-shadow) }
+.p-res-head { display: flex; align-items: center; gap: 12px }
+.p-avatar { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-weight: 800; font-size: 18px; color: var(--p-brand-ink); background: var(--p-brand-soft); flex-shrink: 0 }
+.p-res-nombre { flex: 1; min-width: 0 } .p-res-nombre small { color: var(--p-faint) }
+.p-plan { font-size: 12.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 5px 10px; border-radius: 8px; background: #eee; color: #555 }
+.p-plan.platino { background: linear-gradient(135deg, #e9ecf1, #c9d0db); color: #3c4656 } .p-plan.dorado { background: linear-gradient(135deg, #fbefc8, #f0d27a); color: #6b4e00 }
+.p-plan.proveedor { background: #e2f0ea; color: #1f6b48 } .p-plan.gratuito { background: #f1efea; color: var(--p-soft) }
+.p-est { font-style: normal; font-size: 12.5px; font-weight: 700; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: var(--p-ok-bg); color: var(--p-ok) }
+.p-est.cancelada, .p-est.vencida { background: #f1efea; color: var(--p-faint) } .p-est.en_mora { background: var(--p-warn-bg); color: var(--p-warn) }
+.p-cancelar { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--p-crit-bg); display: flex; flex-direction: column; gap: 10px }
+.p-wa { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; flex-wrap: wrap }
+.p-switch { display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer }
+.p-switch input { appearance: none; width: 52px; height: 30px; border-radius: 15px; background: #d4cfc5; position: relative; cursor: pointer; transition: background .2s }
+.p-switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2) }
+.p-switch input:checked { background: var(--p-ok) } .p-switch input:checked::after { left: 25px }
+
+/* planes */
+.p-planes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 14px }
+.p-plan-card { position: relative; text-align: left; font: inherit; color: inherit; background: #fff; border: 2px solid var(--p-line); border-radius: 20px; padding: 20px 18px;
+  cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: border-color .15s, box-shadow .15s }
+.p-plan-card:hover:not(:disabled) { border-color: #b9c9ec } .p-plan-card.sel { border-color: var(--p-brand); box-shadow: 0 0 0 4px rgba(47,99,200,.15) }
+.p-plan-card:disabled { opacity: .45; cursor: not-allowed }
+.p-plan-card h3 { font-size: 20px } .p-precio { font-size: 30px; font-weight: 800; letter-spacing: -.02em } .p-precio small { font-size: 15px; color: var(--p-faint); font-weight: 600 }
+.p-plan-card ul { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; margin-top: 4px }
+.p-plan-card li.si::before { content: '✔'; color: var(--p-ok); margin-right: 8px; font-weight: 800 }
+.p-plan-card li.no { color: var(--p-faint); text-decoration: line-through } .p-plan-card li.no::before { content: '✕'; margin-right: 8px }
+.p-reco { position: absolute; top: -11px; right: 14px; background: var(--p-accent); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px }
+.p-reco.gris { background: var(--p-soft); left: 14px; right: auto }
+.p-pagar { position: sticky; bottom: 12px; margin-top: 18px; background: #fff; border: 1px solid var(--p-line); border-radius: 18px; box-shadow: var(--p-shadow);
+  padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px }
+.p-pagar small { display: block; color: var(--p-faint) } .p-pagar .p-btn.grande { width: auto; min-width: 260px }
+
+/* estado en tiempo real */
+.p-vivo { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--p-soft); background: #fff; border: 1px solid var(--p-line); padding: 6px 12px; border-radius: 999px }
+.p-vivo i { width: 10px; height: 10px; border-radius: 50%; background: #2fb35a; animation: p-pulso 1.6s infinite }
+@keyframes p-pulso { 0% { box-shadow: 0 0 0 0 rgba(47,179,90,.6) } 70% { box-shadow: 0 0 0 10px rgba(47,179,90,0) } 100% { box-shadow: 0 0 0 0 rgba(47,179,90,0) } }
+@media (prefers-reduced-motion: reduce) { .p-vivo i { animation: none } }
+.p-estado { display: flex; gap: 18px; align-items: flex-start; border-radius: 22px; padding: 24px; margin-bottom: 16px; border: 1px solid }
+.p-estado.ok { background: var(--p-ok-bg); border-color: #c4e6cf } .p-estado.warn { background: var(--p-warn-bg); border-color: #f0dca8 }
+.p-estado.crit { background: var(--p-crit-bg); border-color: #f4c8c2 }
+.p-estado-ico { font-size: 54px; line-height: 1 } .p-estado small { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--p-soft); font-size: 12px }
+.p-estado h2 { font-size: 34px; margin: 2px 0 8px } .p-obs { font-size: 18px } .p-meta { color: var(--p-soft); margin-top: 10px; font-size: 14.5px }
+.p-historial { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px }
+.p-historial li { display: flex; gap: 12px; align-items: flex-start } .p-historial li .p-chip { flex-shrink: 0; min-width: 104px; justify-content: center }
+.p-historial p { margin: 0 } .p-historial small { color: var(--p-faint) }
+
+/* pagos */
+.p-pasarela-head { display: flex; justify-content: space-between; align-items: center; font-size: 18px }
+.p-tarjeta-demo { background: linear-gradient(135deg, #24324a, #3e5a8a); color: #fff; border-radius: 14px; padding: 16px; font-family: ui-monospace, monospace; letter-spacing: .1em; margin: 6px 0 14px }
+
+/* ---------- residente (letra grande) */
+.p-residente-vista { font-size: 18px }
+.p-saludo { background: linear-gradient(135deg, #2f63c8, #5b8ce6); color: #fff; border-radius: 24px; padding: 24px; margin-bottom: 18px }
+.p-saludo h1 { font-size: 32px } .p-saludo p { font-size: 18px; margin-top: 6px; opacity: .95 } .p-circulo { font-size: 16px !important }
+.p-filtros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px }
+.p-filtros button { font: inherit; font-size: 16px; font-weight: 700; border: 2px solid var(--p-line); background: #fff; border-radius: 16px; padding: 12px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--p-soft); min-height: 72px }
+.p-filtros button span { font-size: 24px } .p-filtros button.on { border-color: var(--p-brand); color: var(--p-brand-ink); background: var(--p-brand-soft) }
+.p-contenidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px }
+.p-contenido { background: #fff; border: 1px solid var(--p-line); border-radius: 20px; padding: 20px; box-shadow: var(--p-shadow) }
+.p-contenido.evento { border-left: 6px solid var(--p-accent) } .p-contenido.chiste { border-left: 6px solid #f2c94c } .p-contenido.noticia { border-left: 6px solid var(--p-brand) }
+.p-contenido h2 { font-size: 22px; margin: 6px 0 } .p-contenido p { font-size: 18px; line-height: 1.55 }
+.p-tipo { font-size: 14px; font-weight: 700; color: var(--p-soft); text-transform: uppercase; letter-spacing: .05em }
+.p-cuando { font-weight: 700; color: #9a4a22; margin-bottom: 6px }
+.p-vacio-txt { text-align: center; color: var(--p-soft); padding: 30px }
+.p-ayuda-cta { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 20px; flex-wrap: wrap }
+.p-ayuda-cta .p-btn.grande { width: auto; min-width: 220px }
+
+/* ---------- cuidador */
+.p-cuidador { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start }
+.p-lista-res { display: flex; flex-direction: column; gap: 8px }
+.p-lista-res button { font: inherit; text-align: left; background: #fff; border: 2px solid var(--p-line); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; color: inherit }
+.p-lista-res button.on { border-color: var(--p-brand); background: var(--p-brand-soft) } .p-lista-res small { color: var(--p-faint); font-size: 13px }
+.p-ficha { display: flex; flex-direction: column }
+.p-semaforo { border: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px }
+.p-semaforo legend { font-weight: 700; margin-bottom: 8px; font-size: 15px }
+.p-semaforo label { border: 2px solid var(--p-line); border-radius: 16px; padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; cursor: pointer; background: #fff }
+.p-semaforo input { position: absolute; opacity: 0; pointer-events: none }
+.p-semaforo label:focus-within { outline: 3px solid rgba(47,99,200,.3) }
+.p-sem-ico { font-size: 30px } .p-semaforo b { font-size: 17px } .p-semaforo small { color: var(--p-faint); font-size: 12.5px; line-height: 1.3 }
+.p-semaforo label.ok.sel { border-color: var(--p-ok); background: var(--p-ok-bg) } .p-semaforo label.warn.sel { border-color: #d39b16; background: var(--p-warn-bg) }
+.p-semaforo label.crit.sel { border-color: var(--p-crit); background: var(--p-crit-bg) }
+
+/* ---------- celular */
+@media (max-width: 720px) {
+  .p-header { padding: 8px 12px; gap: 8px; flex-wrap: wrap }
+  .p-marca small, .p-quien { display: none }
+  .p-vistas { order: 5; flex: 1 1 100% }
+  .p-vistas a { flex: 1; text-align: center }
+  .p-main { padding: 16px 14px 40px }
+  .p-shell h1 { font-size: 23px }
+  .p-grid2 { grid-template-columns: 1fr }
+  .p-acceso { padding: 16px 12px }
+  .p-acceso-card { padding: 20px 18px; border-radius: 20px }
+  .p-telefono { grid-template-columns: 1fr }
+  .p-pagar { flex-direction: column; align-items: stretch; bottom: 8px } .p-pagar .p-btn.grande { width: 100%; min-width: 0 }
+  .p-cuidador { grid-template-columns: 1fr }
+  .p-lista-res { flex-direction: row; overflow-x: auto; padding-bottom: 4px } .p-lista-res button { min-width: 200px }
+  .p-semaforo { grid-template-columns: 1fr } .p-semaforo label { flex-direction: row; text-align: left; gap: 12px } .p-semaforo small { flex: 1 }
+  .p-estado { flex-direction: column; gap: 6px; padding: 20px } .p-estado h2 { font-size: 28px }
+  .p-saludo h1 { font-size: 27px } .p-filtros { grid-template-columns: repeat(2, 1fr) }
+  .p-kv { grid-template-columns: 1fr; gap: 2px } .p-kv dd { margin-bottom: 6px }
+  .p-pasos li { font-size: 11px }
+  .p-ayuda-cta .p-btn.grande, .p-titulo .p-btn { width: 100% }
+}

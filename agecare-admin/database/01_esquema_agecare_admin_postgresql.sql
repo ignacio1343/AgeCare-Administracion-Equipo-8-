@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oVkzSr08YtS8AzxpFeJOKOQWVEoIE1agkdmZh9tkkQS9FrfpJ7Q7ZlcpLvxDbmo
+\restrict VqZcX55SSTxceR6s0dfbfy0vmGfM59WhE9dmTAUP832Wn87ueAQmzyCu9il98WU
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -154,8 +154,10 @@ CREATE TABLE public.contenido (
     fecha_publicacion timestamp with time zone,
     fecha_creacion timestamp with time zone NOT NULL,
     fecha_eliminacion timestamp with time zone,
+    fecha_evento timestamp with time zone,
+    lugar character varying(160),
     CONSTRAINT ck_contenido_estado CHECK (((estado)::text = ANY ((ARRAY['borrador'::character varying, 'programado'::character varying, 'publicado'::character varying, 'archivado'::character varying])::text[]))),
-    CONSTRAINT ck_contenido_tipo CHECK (((tipo)::text = ANY ((ARRAY['chiste'::character varying, 'noticia'::character varying])::text[])))
+    CONSTRAINT ck_contenido_tipo CHECK (((tipo)::text = ANY ((ARRAY['chiste'::character varying, 'noticia'::character varying, 'evento'::character varying])::text[])))
 );
 
 
@@ -525,6 +527,93 @@ ALTER SEQUENCE public.miembro_staff_id_staff_seq OWNED BY public.miembro_staff.i
 
 
 --
+-- Name: notificacion_app; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notificacion_app (
+    id_notificacion integer NOT NULL,
+    id_usuario integer NOT NULL,
+    id_paciente integer,
+    tipo character varying(30) NOT NULL,
+    titulo character varying(160) NOT NULL,
+    cuerpo character varying(1000) NOT NULL,
+    fecha_creacion timestamp with time zone NOT NULL,
+    fecha_lectura timestamp with time zone,
+    CONSTRAINT ck_notificacion_tipo CHECK (((tipo)::text = ANY ((ARRAY['estado_riesgoso'::character varying, 'alerta_salud'::character varying, 'pago'::character varying, 'plan'::character varying, 'sistema'::character varying])::text[])))
+);
+
+
+--
+-- Name: notificacion_app_id_notificacion_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.notificacion_app_id_notificacion_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: notificacion_app_id_notificacion_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.notificacion_app_id_notificacion_seq OWNED BY public.notificacion_app.id_notificacion;
+
+
+--
+-- Name: orden_pago; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.orden_pago (
+    id_orden integer NOT NULL,
+    orden_compra character varying(26) NOT NULL,
+    id_usuario integer NOT NULL,
+    id_suscripcion integer,
+    id_paciente integer,
+    codigo_plan character varying(40) NOT NULL,
+    tipo character varying(20) NOT NULL,
+    monto integer NOT NULL,
+    proveedor character varying(20) NOT NULL,
+    estado character varying(20) NOT NULL,
+    token character varying(100),
+    fecha_creacion timestamp with time zone NOT NULL,
+    fecha_confirmacion timestamp with time zone,
+    codigo_autorizacion character varying(20),
+    tarjeta character varying(10),
+    tipo_pago character varying(10),
+    codigo_respuesta integer,
+    detalle character varying(300),
+    id_transaccion integer,
+    CONSTRAINT ck_orden_estado CHECK (((estado)::text = ANY ((ARRAY['iniciada'::character varying, 'aprobada'::character varying, 'rechazada'::character varying, 'anulada'::character varying, 'error'::character varying])::text[]))),
+    CONSTRAINT ck_orden_monto CHECK ((monto > 0)),
+    CONSTRAINT ck_orden_tipo CHECK (((tipo)::text = ANY ((ARRAY['alta'::character varying, 'renovacion'::character varying, 'cambio'::character varying])::text[])))
+);
+
+
+--
+-- Name: orden_pago_id_orden_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.orden_pago_id_orden_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: orden_pago_id_orden_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.orden_pago_id_orden_seq OWNED BY public.orden_pago.id_orden;
+
+
+--
 -- Name: paciente; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -532,7 +621,13 @@ CREATE TABLE public.paciente (
     id_paciente integer NOT NULL,
     nombre character varying(120) NOT NULL,
     estado character varying(30) NOT NULL,
-    fecha_alta timestamp with time zone NOT NULL
+    fecha_alta timestamp with time zone NOT NULL,
+    rut character varying(12),
+    primer_nombre character varying(60),
+    primer_apellido character varying(60),
+    segundo_apellido character varying(60),
+    fecha_nacimiento date,
+    id_usuario integer
 );
 
 
@@ -790,6 +885,42 @@ ALTER SEQUENCE public.registro_auditoria_id_registro_seq OWNED BY public.registr
 
 
 --
+-- Name: registro_vital; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.registro_vital (
+    id_registro integer NOT NULL,
+    id_paciente integer NOT NULL,
+    id_usuario_cuidador integer NOT NULL,
+    estado character varying(20) NOT NULL,
+    observacion character varying(1000) NOT NULL,
+    fecha timestamp with time zone NOT NULL,
+    id_alerta integer,
+    CONSTRAINT ck_registro_vital_estado CHECK (((estado)::text = ANY ((ARRAY['normal'::character varying, 'alerta'::character varying, 'riesgoso'::character varying])::text[])))
+);
+
+
+--
+-- Name: registro_vital_id_registro_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.registro_vital_id_registro_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: registro_vital_id_registro_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.registro_vital_id_registro_seq OWNED BY public.registro_vital.id_registro;
+
+
+--
 -- Name: respuesta_ticket; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -834,6 +965,42 @@ CREATE TABLE public.rol_staff (
     nombre character varying(120) NOT NULL,
     descripcion character varying(400)
 );
+
+
+--
+-- Name: sesion_app; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sesion_app (
+    id_sesion integer NOT NULL,
+    id_usuario integer NOT NULL,
+    refresh_token_hash character varying(64) NOT NULL,
+    fecha_inicio timestamp with time zone NOT NULL,
+    fecha_expiracion timestamp with time zone NOT NULL,
+    fecha_revocacion timestamp with time zone,
+    motivo_revocacion character varying(30),
+    ip character varying(45)
+);
+
+
+--
+-- Name: sesion_app_id_sesion_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sesion_app_id_sesion_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sesion_app_id_sesion_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sesion_app_id_sesion_seq OWNED BY public.sesion_app.id_sesion;
 
 
 --
@@ -914,6 +1081,7 @@ CREATE TABLE public.suscripcion (
     fecha_cancelacion timestamp with time zone,
     motivo_cancelacion character varying(300),
     id_externo_pasarela character varying(100),
+    id_paciente integer,
     CONSTRAINT ck_suscripcion_estado CHECK (((estado)::text = ANY ((ARRAY['activa'::character varying, 'en_mora'::character varying, 'cancelada'::character varying, 'vencida'::character varying])::text[])))
 );
 
@@ -1066,7 +1234,18 @@ CREATE TABLE public.usuario_app (
     ultimo_acceso timestamp with time zone,
     telefono character varying(20),
     whatsapp_habilitado boolean DEFAULT false NOT NULL,
-    whatsapp_verificado timestamp with time zone
+    whatsapp_verificado timestamp with time zone,
+    rut character varying(12),
+    nombres character varying(80),
+    primer_apellido character varying(60),
+    segundo_apellido character varying(60),
+    password_hash character varying(255),
+    debe_cambiar_password boolean DEFAULT false NOT NULL,
+    intentos_fallidos integer DEFAULT 0 NOT NULL,
+    bloqueado_hasta timestamp with time zone,
+    fecha_aceptacion_terminos timestamp with time zone,
+    id_version_terminos integer,
+    origen character varying(20) DEFAULT 'plataforma'::character varying NOT NULL
 );
 
 
@@ -1112,6 +1291,51 @@ CREATE TABLE public.verificacion_salud (
     latencia_ms integer,
     detalle character varying(300)
 );
+
+
+--
+-- Name: verificacion_sms; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.verificacion_sms (
+    id_verificacion integer NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    telefono character varying(20) NOT NULL,
+    rut character varying(12) NOT NULL,
+    email character varying(150) NOT NULL,
+    datos text NOT NULL,
+    proveedor character varying(20) NOT NULL,
+    codigo_hash character varying(64),
+    intentos integer NOT NULL,
+    envios integer NOT NULL,
+    estado character varying(20) NOT NULL,
+    fecha_creacion timestamp with time zone NOT NULL,
+    fecha_ultimo_envio timestamp with time zone NOT NULL,
+    fecha_expiracion timestamp with time zone NOT NULL,
+    fecha_verificacion timestamp with time zone,
+    ip character varying(45),
+    CONSTRAINT ck_sms_estado CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'verificada'::character varying, 'bloqueada'::character varying, 'expirada'::character varying])::text[])))
+);
+
+
+--
+-- Name: verificacion_sms_id_verificacion_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.verificacion_sms_id_verificacion_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: verificacion_sms_id_verificacion_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.verificacion_sms_id_verificacion_seq OWNED BY public.verificacion_sms.id_verificacion;
 
 
 --
@@ -1219,6 +1443,20 @@ ALTER TABLE ONLY public.miembro_staff ALTER COLUMN id_staff SET DEFAULT nextval(
 
 
 --
+-- Name: notificacion_app id_notificacion; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacion_app ALTER COLUMN id_notificacion SET DEFAULT nextval('public.notificacion_app_id_notificacion_seq'::regclass);
+
+
+--
+-- Name: orden_pago id_orden; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago ALTER COLUMN id_orden SET DEFAULT nextval('public.orden_pago_id_orden_seq'::regclass);
+
+
+--
 -- Name: paciente id_paciente; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1254,10 +1492,24 @@ ALTER TABLE ONLY public.registro_auditoria ALTER COLUMN id_registro SET DEFAULT 
 
 
 --
+-- Name: registro_vital id_registro; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.registro_vital ALTER COLUMN id_registro SET DEFAULT nextval('public.registro_vital_id_registro_seq'::regclass);
+
+
+--
 -- Name: respuesta_ticket id_respuesta; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.respuesta_ticket ALTER COLUMN id_respuesta SET DEFAULT nextval('public.respuesta_ticket_id_respuesta_seq'::regclass);
+
+
+--
+-- Name: sesion_app id_sesion; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sesion_app ALTER COLUMN id_sesion SET DEFAULT nextval('public.sesion_app_id_sesion_seq'::regclass);
 
 
 --
@@ -1293,6 +1545,13 @@ ALTER TABLE ONLY public.transaccion_pago ALTER COLUMN id_transaccion SET DEFAULT
 --
 
 ALTER TABLE ONLY public.usuario_app ALTER COLUMN id_usuario SET DEFAULT nextval('public.usuario_app_id_usuario_seq'::regclass);
+
+
+--
+-- Name: verificacion_sms id_verificacion; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verificacion_sms ALTER COLUMN id_verificacion SET DEFAULT nextval('public.verificacion_sms_id_verificacion_seq'::regclass);
 
 
 --
@@ -1479,6 +1738,38 @@ ALTER TABLE ONLY public.miembro_staff
 
 
 --
+-- Name: notificacion_app notificacion_app_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacion_app
+    ADD CONSTRAINT notificacion_app_pkey PRIMARY KEY (id_notificacion);
+
+
+--
+-- Name: orden_pago orden_pago_orden_compra_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_orden_compra_key UNIQUE (orden_compra);
+
+
+--
+-- Name: orden_pago orden_pago_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_pkey PRIMARY KEY (id_orden);
+
+
+--
+-- Name: orden_pago orden_pago_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_token_key UNIQUE (token);
+
+
+--
 -- Name: paciente paciente_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1575,6 +1866,14 @@ ALTER TABLE ONLY public.registro_auditoria
 
 
 --
+-- Name: registro_vital registro_vital_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.registro_vital
+    ADD CONSTRAINT registro_vital_pkey PRIMARY KEY (id_registro);
+
+
+--
 -- Name: respuesta_ticket respuesta_ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1588,6 +1887,22 @@ ALTER TABLE ONLY public.respuesta_ticket
 
 ALTER TABLE ONLY public.rol_staff
     ADD CONSTRAINT rol_staff_pkey PRIMARY KEY (codigo_rol);
+
+
+--
+-- Name: sesion_app sesion_app_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sesion_app
+    ADD CONSTRAINT sesion_app_pkey PRIMARY KEY (id_sesion);
+
+
+--
+-- Name: sesion_app sesion_app_refresh_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sesion_app
+    ADD CONSTRAINT sesion_app_refresh_token_hash_key UNIQUE (refresh_token_hash);
 
 
 --
@@ -1671,6 +1986,14 @@ ALTER TABLE ONLY public.umbral_alerta
 
 
 --
+-- Name: paciente uq_paciente_id_usuario; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paciente
+    ADD CONSTRAINT uq_paciente_id_usuario UNIQUE (id_usuario);
+
+
+--
 -- Name: version_legal uq_version_legal; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1700,6 +2023,22 @@ ALTER TABLE ONLY public.usuario_perfil
 
 ALTER TABLE ONLY public.verificacion_salud
     ADD CONSTRAINT verificacion_salud_pkey PRIMARY KEY (codigo_componente, fecha_hora);
+
+
+--
+-- Name: verificacion_sms verificacion_sms_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verificacion_sms
+    ADD CONSTRAINT verificacion_sms_pkey PRIMARY KEY (id_verificacion);
+
+
+--
+-- Name: verificacion_sms verificacion_sms_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verificacion_sms
+    ADD CONSTRAINT verificacion_sms_token_hash_key UNIQUE (token_hash);
 
 
 --
@@ -1802,6 +2141,41 @@ CREATE INDEX ix_miembro_staff_token_activacion_hash ON public.miembro_staff USIN
 
 
 --
+-- Name: ix_notificacion_app_fecha_creacion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_notificacion_app_fecha_creacion ON public.notificacion_app USING btree (fecha_creacion);
+
+
+--
+-- Name: ix_notificacion_app_id_usuario; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_notificacion_app_id_usuario ON public.notificacion_app USING btree (id_usuario);
+
+
+--
+-- Name: ix_orden_pago_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_orden_pago_estado ON public.orden_pago USING btree (estado);
+
+
+--
+-- Name: ix_orden_pago_id_usuario; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_orden_pago_id_usuario ON public.orden_pago USING btree (id_usuario);
+
+
+--
+-- Name: ix_paciente_rut; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ix_paciente_rut ON public.paciente USING btree (rut);
+
+
+--
 -- Name: ix_reembolso_id_transaccion; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1830,10 +2204,38 @@ CREATE INDEX ix_registro_auditoria_id_staff_actor ON public.registro_auditoria U
 
 
 --
+-- Name: ix_registro_vital_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_registro_vital_fecha ON public.registro_vital USING btree (fecha);
+
+
+--
+-- Name: ix_registro_vital_id_paciente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_registro_vital_id_paciente ON public.registro_vital USING btree (id_paciente);
+
+
+--
+-- Name: ix_registro_vital_id_usuario_cuidador; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_registro_vital_id_usuario_cuidador ON public.registro_vital USING btree (id_usuario_cuidador);
+
+
+--
 -- Name: ix_respuesta_ticket_id_ticket; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX ix_respuesta_ticket_id_ticket ON public.respuesta_ticket USING btree (id_ticket);
+
+
+--
+-- Name: ix_sesion_app_id_usuario; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_sesion_app_id_usuario ON public.sesion_app USING btree (id_usuario);
 
 
 --
@@ -1848,6 +2250,13 @@ CREATE INDEX ix_sesion_staff_id_staff ON public.sesion_staff USING btree (id_sta
 --
 
 CREATE INDEX ix_suscripcion_id_cuenta ON public.suscripcion USING btree (id_cuenta);
+
+
+--
+-- Name: ix_suscripcion_id_paciente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_suscripcion_id_paciente ON public.suscripcion USING btree (id_paciente);
 
 
 --
@@ -1904,6 +2313,20 @@ CREATE INDEX ix_transaccion_pago_id_suscripcion ON public.transaccion_pago USING
 --
 
 CREATE UNIQUE INDEX ix_usuario_app_email ON public.usuario_app USING btree (email);
+
+
+--
+-- Name: ix_usuario_app_rut; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ix_usuario_app_rut ON public.usuario_app USING btree (rut);
+
+
+--
+-- Name: ix_verificacion_sms_rut; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_verificacion_sms_rut ON public.verificacion_sms USING btree (rut);
 
 
 --
@@ -2011,6 +2434,30 @@ ALTER TABLE ONLY public.evento_pago
 
 
 --
+-- Name: paciente fk_paciente_usuario; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paciente
+    ADD CONSTRAINT fk_paciente_usuario FOREIGN KEY (id_usuario) REFERENCES public.usuario_app(id_usuario);
+
+
+--
+-- Name: suscripcion fk_suscripcion_paciente; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.suscripcion
+    ADD CONSTRAINT fk_suscripcion_paciente FOREIGN KEY (id_paciente) REFERENCES public.paciente(id_paciente);
+
+
+--
+-- Name: usuario_app fk_usuario_app_terminos; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuario_app
+    ADD CONSTRAINT fk_usuario_app_terminos FOREIGN KEY (id_version_terminos) REFERENCES public.version_legal(id_version);
+
+
+--
 -- Name: incidente incidente_codigo_componente_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2072,6 +2519,62 @@ ALTER TABLE ONLY public.mensaje_whatsapp
 
 ALTER TABLE ONLY public.miembro_staff
     ADD CONSTRAINT miembro_staff_codigo_rol_fkey FOREIGN KEY (codigo_rol) REFERENCES public.rol_staff(codigo_rol);
+
+
+--
+-- Name: notificacion_app notificacion_app_id_paciente_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacion_app
+    ADD CONSTRAINT notificacion_app_id_paciente_fkey FOREIGN KEY (id_paciente) REFERENCES public.paciente(id_paciente);
+
+
+--
+-- Name: notificacion_app notificacion_app_id_usuario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacion_app
+    ADD CONSTRAINT notificacion_app_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuario_app(id_usuario);
+
+
+--
+-- Name: orden_pago orden_pago_codigo_plan_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_codigo_plan_fkey FOREIGN KEY (codigo_plan) REFERENCES public.plan(codigo_plan);
+
+
+--
+-- Name: orden_pago orden_pago_id_paciente_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_id_paciente_fkey FOREIGN KEY (id_paciente) REFERENCES public.paciente(id_paciente);
+
+
+--
+-- Name: orden_pago orden_pago_id_suscripcion_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_id_suscripcion_fkey FOREIGN KEY (id_suscripcion) REFERENCES public.suscripcion(id_suscripcion);
+
+
+--
+-- Name: orden_pago orden_pago_id_transaccion_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_id_transaccion_fkey FOREIGN KEY (id_transaccion) REFERENCES public.transaccion_pago(id_transaccion);
+
+
+--
+-- Name: orden_pago orden_pago_id_usuario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orden_pago
+    ADD CONSTRAINT orden_pago_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuario_app(id_usuario);
 
 
 --
@@ -2139,6 +2642,30 @@ ALTER TABLE ONLY public.registro_auditoria
 
 
 --
+-- Name: registro_vital registro_vital_id_alerta_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.registro_vital
+    ADD CONSTRAINT registro_vital_id_alerta_fkey FOREIGN KEY (id_alerta) REFERENCES public.alerta(id_alerta);
+
+
+--
+-- Name: registro_vital registro_vital_id_paciente_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.registro_vital
+    ADD CONSTRAINT registro_vital_id_paciente_fkey FOREIGN KEY (id_paciente) REFERENCES public.paciente(id_paciente);
+
+
+--
+-- Name: registro_vital registro_vital_id_usuario_cuidador_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.registro_vital
+    ADD CONSTRAINT registro_vital_id_usuario_cuidador_fkey FOREIGN KEY (id_usuario_cuidador) REFERENCES public.usuario_app(id_usuario);
+
+
+--
 -- Name: respuesta_ticket respuesta_ticket_id_staff_autor_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2152,6 +2679,14 @@ ALTER TABLE ONLY public.respuesta_ticket
 
 ALTER TABLE ONLY public.respuesta_ticket
     ADD CONSTRAINT respuesta_ticket_id_ticket_fkey FOREIGN KEY (id_ticket) REFERENCES public.ticket(id_ticket);
+
+
+--
+-- Name: sesion_app sesion_app_id_usuario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sesion_app
+    ADD CONSTRAINT sesion_app_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuario_app(id_usuario);
 
 
 --
@@ -2270,5 +2805,5 @@ ALTER TABLE ONLY public.version_legal
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oVkzSr08YtS8AzxpFeJOKOQWVEoIE1agkdmZh9tkkQS9FrfpJ7Q7ZlcpLvxDbmo
+\unrestrict VqZcX55SSTxceR6s0dfbfy0vmGfM59WhE9dmTAUP832Wn87ueAQmzyCu9il98WU
 

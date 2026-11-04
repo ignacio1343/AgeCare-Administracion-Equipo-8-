@@ -11,8 +11,8 @@ from . import errors, planificador
 from .config import get_settings
 from .db import SessionLocal
 from .errors import ApiError
-from .routers import (auth, comercial, configuracion, contenido, metricas, moderacion, operacion, soporte, staff,
-                      usuarios, whatsapp)
+from .routers import (auth, comercial, configuracion, contenido, metricas, moderacion, operacion, portal,
+                      portal_vistas, soporte, staff, usuarios, whatsapp)
 
 API = "/api/v1"
 
@@ -31,8 +31,8 @@ async def lifespan(_app):
 app = FastAPI(
     lifespan=lifespan,
     title="AgeCare · API de la Consola de Administración",
-    version="0.5.1",
-    description="Consola de administración AgeCare: acceso y auditoría, soporte, usuarios de la app, estado operativo, contenidos, moderación, dashboards, planes y suscripciones, configuración y legales, y avisos de salud por WhatsApp al familiar.",
+    version="0.6.0",
+    description="Consola de administración AgeCare: acceso y auditoría, soporte, usuarios de la app, estado operativo, contenidos, moderación, dashboards, planes y suscripciones, configuración y legales, avisos de salud por WhatsApp al familiar y portal web del representante, el residente y el cuidador (registro con SMS, Webpay Plus, ficha vital).",
     docs_url=f"{API}/docs", openapi_url=f"{API}/openapi.json", redoc_url=None,
 )
 errors.install(app)
@@ -40,7 +40,8 @@ app.add_middleware(CORSMiddleware, allow_origins=get_settings().cors_list, allow
                    allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 
 for r in (auth.router, staff.router, soporte.router, usuarios.router, operacion.router, contenido.router,
-          moderacion.router, metricas.router, comercial.router, configuracion.router, whatsapp.router):
+          moderacion.router, metricas.router, comercial.router, configuracion.router, whatsapp.router, portal.router,
+          portal_vistas.router):
     app.include_router(r, prefix=API)
 
 

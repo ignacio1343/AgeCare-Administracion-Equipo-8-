@@ -283,9 +283,15 @@ def verificar_webhook(hub_mode: str | None = Query(None, alias="hub.mode"),
                       hub_token: str | None = Query(None, alias="hub.verify_token"),
                       hub_challenge: str | None = Query(None, alias="hub.challenge")):
     import hmac
-    esperado = get_settings().whatsapp_verify_token
-    if hub_mode == "subscribe" and esperado and hub_token and hmac.compare_digest(hub_token, esperado):
+    import logging
+    esperado = get_settings().whatsapp_verify_token  # ya viene sin espacios (config._sin_espacios)
+    recibido = "".join((hub_token or "").split())
+    if hub_mode == "subscribe" and esperado and recibido and hmac.compare_digest(recibido.encode(), esperado.encode()):
         return Response(content=hub_challenge or "", media_type="text/plain")
+    # Diagnóstico sin revelar el token: modo y largos de lo recibido y lo esperado
+    logging.getLogger("whatsapp").warning(
+        "verificación del webhook rechazada: hub.mode=%s, token recibido de %s caracteres, esperado de %s%s",
+        hub_mode, len(recibido), len(esperado), "" if esperado else " (WHATSAPP_VERIFY_TOKEN vacío)")
     raise ApiError(403, "FORBIDDEN", "Token de verificación inválido.")
 
 

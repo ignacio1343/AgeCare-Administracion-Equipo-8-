@@ -31,8 +31,8 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .db import utcnow
-from .models import (ORDEN_WHATSAPP, Alerta, CuentaCliente, MembresiaCirculo, MensajeWhatsapp, Paciente,
-                     ParametroSistema, PlanFuncionalidad, Suscripcion, UmbralAlerta, UsuarioApp)
+from .models import (ORDEN_WHATSAPP, Alerta, MembresiaCirculo, MensajeWhatsapp, Paciente,
+                     ParametroSistema, PlanFuncionalidad, UmbralAlerta, UsuarioApp)
 
 log = logging.getLogger("whatsapp")
 
@@ -85,12 +85,10 @@ def _num(db: Session, clave: str, defecto: int) -> int:
 
 
 def plan_del_paciente(db: Session, id_paciente: int) -> str | None:
-    """Plan con más funcionalidades entre las suscripciones activas de los titulares del círculo del paciente."""
-    titulares = select(MembresiaCirculo.id_usuario).where(MembresiaCirculo.id_paciente == id_paciente)
-    planes = db.scalars(select(Suscripcion.codigo_plan).join(CuentaCliente)
-                        .where(CuentaCliente.id_usuario.in_(titulares), Suscripcion.estado.in_(("activa", "en_mora")))).all()
-    con_whatsapp = [p for p in planes if db.get(PlanFuncionalidad, (p, FUNCIONALIDAD))]
-    return (con_whatsapp or planes or [None])[0]
+    """Plan vigente del residente: su suscripción propia (portal, v0.6) o, en datos anteriores, el mejor plan entre
+    las suscripciones activas de los titulares del círculo."""
+    from .portal import plan_vigente
+    return plan_vigente(db, id_paciente)
 
 
 def plan_incluye_whatsapp(db: Session, codigo_plan: str | None) -> bool:
@@ -129,11 +127,23 @@ def registrar_evento(db: Session, id_paciente: int, tipo: str, signo: str | None
     db.add(alerta)
     db.flush()
     db.refresh(alerta)
-    avisos = encolar_avisos(db, alerta) if severidad == "critica" else []
+    avisos = []
+    if severidad == "critica":
+        from .portal import avisar_en_portal
+        avisos = encolar_avisos(db, alerta)
+        avisar_en_portal(db, alerta, f"{describir_evento(db, alerta).capitalize()}. Revisa su estado o llama a la cuidadora.")
     return alerta, nivel, avisos
 
 
 def describir_evento(db: Session, alerta: Alerta) -> str:
+    if alerta.codigo_tipo == "ficha_vital":
+        from .models import RegistroVital
+        reg = db.scalar(select(RegistroVital).where(RegistroVital.id_alerta == alerta.id_alerta))
+        texto = f"estado {'Riesgoso' if alerta.severidad == 'critica' else 'Alerta'} registrado por la cuidadora"
+        if reg is not None and _param(db, "whatsapp_incluir_valor", "true").lower() == "true":
+            obs = " ".join(reg.observacion.split())  # Meta no acepta saltos de línea en las variables
+            texto += f" ({obs[:90] + '…' if len(obs) > 90 else obs})"
+        return texto
     if alerta.codigo_tipo == "vital" and alerta.signo_vital:
         nombre = SIGNOS.get(alerta.signo_vital, alerta.signo_vital.replace("_", " "))
         if _param(db, "whatsapp_incluir_valor", "true").lower() == "true" and alerta.valor is not None:

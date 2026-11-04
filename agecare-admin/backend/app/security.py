@@ -78,3 +78,26 @@ def verify_totp(secret: str | None, code: str | None) -> bool:
     if not secret or not code:
         return False
     return pyotp.TOTP(secret).verify(code.strip(), valid_window=1)
+
+
+# ---------------------------------------------------------------- portal web (usuarios de la app)
+def create_app_token(id_usuario: int) -> str:
+    """Token del portal: tipo «app». Las dependencias del staff lo rechazan (exigen «access») y viceversa."""
+    s = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {"sub": str(id_usuario), "iat": now, "exp": now + timedelta(minutes=s.access_token_minutes), "typ": "app"}
+    return jwt.encode(payload, s.jwt_secret, algorithm=s.jwt_algorithm)
+
+
+def decode_app_token(token: str) -> dict:
+    s = get_settings()
+    data = jwt.decode(token, s.jwt_secret, algorithms=[s.jwt_algorithm])
+    if data.get("typ") != "app":
+        raise jwt.InvalidTokenError("tipo de token inválido")
+    return data
+
+
+def password_temporal() -> str:
+    """Clave temporal legible para entregar por teléfono (soporte): 4 letras + 4 dígitos, sin caracteres ambiguos."""
+    letras = "abcdefghjkmnpqrstuvwxyz"
+    return "".join(secrets.choice(letras) for _ in range(4)) + "".join(secrets.choice("23456789") for _ in range(4))

@@ -20,6 +20,7 @@ import Moderacion from './pages/Moderacion'
 import Dashboards from './pages/Dashboards'
 import Planes from './pages/Planes'
 import Configuracion from './pages/Configuracion'
+import PortalApp from './portal/PortalApp'
 
 // Ruta protegida: exige sesión y, si se indica, permiso sobre un módulo
 function Protegida({ permiso, nivel = 'lectura', children }: { permiso?: string; nivel?: 'lectura' | 'escritura'; children: ReactNode }) {
@@ -44,6 +45,7 @@ function Inicio() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/portal/*" element={<PortalApp />} />
       <Route path="/login" element={<Login />} />
       <Route path="/activar" element={<Activar />} />
       <Route element={<Protegida><Layout /></Protegida>}>

@@ -6,6 +6,7 @@ import { Card, Cargando, Chip, clp, ErrorBox, fecha, fechaHora, num, Paginacion,
 interface Contenido {
   id_contenido: number; tipo: string; titulo: string; cuerpo: string; etiquetas: string[]; estado: string
   fecha_programada: string | null; fecha_publicacion: string | null; fecha_creacion: string
+  fecha_evento: string | null; lugar: string | null
 }
 interface Producto {
   id_producto: number; nombre: string; categoria: string; proveedor: string; precio_referencial: number | null
@@ -17,7 +18,10 @@ interface Cuidadora {
   revisor: string | null; fecha_envio: string; fecha_revision: string | null
 }
 
-const vacio = { tipo: 'noticia', titulo: '', cuerpo: '', etiquetas: '' }
+const vacio = { tipo: 'noticia', titulo: '', cuerpo: '', etiquetas: '', fecha_evento: '', lugar: '' }
+const TIPO: Record<string, string> = { chiste: 'Chiste', noticia: 'Noticia', evento: 'Evento' }
+// datetime-local (hora de Chile del navegador) ↔ ISO
+const aLocal = (s: string | null) => s ? new Date(new Date(s).getTime() - new Date(s).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''
 
 // CU17 Gestionar contenido curado · CU18 Publicar/programar
 function TabContenido({ escribe }: { escribe: boolean }) {
@@ -32,9 +36,10 @@ function TabContenido({ escribe }: { escribe: boolean }) {
   const guardar = async (e: FormEvent) => {
     e.preventDefault(); if (!form) return; setError(null)
     const etiquetas = form.etiquetas.split(',').map(s => s.trim()).filter(Boolean)
+    const ev = form.tipo === 'evento' ? { fecha_evento: form.fecha_evento ? new Date(form.fecha_evento).toISOString() : null, lugar: form.lugar || null } : {}
     try {
-      if (form.id) await api(`/contenidos/${form.id}`, { method: 'PATCH', body: { titulo: form.titulo, cuerpo: form.cuerpo, etiquetas } })
-      else await api('/contenidos', { method: 'POST', body: { tipo: form.tipo, titulo: form.titulo, cuerpo: form.cuerpo, etiquetas } })
+      if (form.id) await api(`/contenidos/${form.id}`, { method: 'PATCH', body: { titulo: form.titulo, cuerpo: form.cuerpo, etiquetas, ...ev } })
+      else await api('/contenidos', { method: 'POST', body: { tipo: form.tipo, titulo: form.titulo, cuerpo: form.cuerpo, etiquetas, ...ev } })
       setForm(null); cargar()
     } catch (err) { setError(err) }
   }
@@ -44,21 +49,25 @@ function TabContenido({ escribe }: { escribe: boolean }) {
   }
 
   return (
-    <Card title="Contenido curado" sub="Chistes y noticias del feed de la app · los borradores no se ven en la app"
+    <Card title="Contenido curado" sub="Chistes, noticias y eventos que ven los residentes en el portal y la app · los borradores no se publican"
       actions={escribe && <button className="btn primary sm" onClick={() => setForm(form ? null : { ...vacio })}>{form ? 'Cancelar' : '+ Nuevo contenido'}</button>}>
       <ErrorBox error={error} />
       {form && (
         <form className="form inline-form" style={{ gridTemplateColumns: '1fr 2fr' }} onSubmit={guardar}>
           <label>Tipo<select value={form.tipo} disabled={!!form.id} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-            <option value="noticia">Noticia</option><option value="chiste">Chiste</option></select></label>
+            <option value="noticia">Noticia</option><option value="chiste">Chiste</option><option value="evento">Evento</option></select></label>
           <label>Título<input value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} required minLength={3} /></label>
           <label className="full">Texto<textarea value={form.cuerpo} onChange={e => setForm({ ...form, cuerpo: e.target.value })} required minLength={10} /></label>
+          {form.tipo === 'evento' && <>
+            <label>Fecha y hora del evento<input type="datetime-local" value={form.fecha_evento} onChange={e => setForm({ ...form, fecha_evento: e.target.value })} required /></label>
+            <label>Lugar<input value={form.lugar} onChange={e => setForm({ ...form, lugar: e.target.value })} required maxLength={160} placeholder="Ej.: Sala multiuso, primer piso" /></label>
+          </>}
           <label>Etiquetas <span className="hint">separadas por coma</span><input value={form.etiquetas} onChange={e => setForm({ ...form, etiquetas: e.target.value })} /></label>
           <div className="actions"><button className="btn primary">{form.id ? 'Guardar cambios' : 'Guardar borrador'}</button></div>
         </form>
       )}
       <div className="filters">
-        <select value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value, page: 1 })} aria-label="Tipo"><option value="">Tipo</option><option value="noticia">Noticias</option><option value="chiste">Chistes</option></select>
+        <select value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value, page: 1 })} aria-label="Tipo"><option value="">Tipo</option><option value="noticia">Noticias</option><option value="chiste">Chistes</option><option value="evento">Eventos</option></select>
         <select value={f.estado} onChange={e => setF({ ...f, estado: e.target.value, page: 1 })} aria-label="Estado">
           <option value="">Estado</option>{['borrador', 'programado', 'publicado', 'archivado'].map(s => <option key={s} value={s}>{s}</option>)}</select>
       </div>
@@ -70,12 +79,12 @@ function TabContenido({ escribe }: { escribe: boolean }) {
               <tr key={c.id_contenido}>
                 <td><div className="strong">{c.titulo}</div><div className="sub">{c.cuerpo.slice(0, 90)}{c.cuerpo.length > 90 && '…'}</div>
                   {c.etiquetas.length > 0 && <div style={{ marginTop: 4 }}>{c.etiquetas.map(t => <span key={t} className="chip sm neutral">#{t}</span>)}</div>}</td>
-                <td>{c.tipo === 'chiste' ? 'Chiste' : 'Noticia'}</td>
+                <td>{TIPO[c.tipo] ?? c.tipo}{c.tipo === 'evento' && c.fecha_evento && <div className="sub">{fechaHora(c.fecha_evento)}{c.lugar ? ` · ${c.lugar}` : ''}</div>}</td>
                 <td><Chip estado={c.estado} /></td>
                 <td className="nowrap">{c.estado === 'programado' ? fechaHora(c.fecha_programada) : c.estado === 'publicado' ? fechaHora(c.fecha_publicacion) : fecha(c.fecha_creacion)}</td>
                 <td className="right">{escribe && (
                   <div className="state-actions" style={{ justifyContent: 'flex-end' }}>
-                    {c.estado !== 'archivado' && <button className="btn ghost sm" onClick={() => setForm({ id: c.id_contenido, tipo: c.tipo, titulo: c.titulo, cuerpo: c.cuerpo, etiquetas: c.etiquetas.join(', ') })}>Editar</button>}
+                    {c.estado !== 'archivado' && <button className="btn ghost sm" onClick={() => setForm({ id: c.id_contenido, tipo: c.tipo, titulo: c.titulo, cuerpo: c.cuerpo, etiquetas: c.etiquetas.join(', '), fecha_evento: aLocal(c.fecha_evento), lugar: c.lugar ?? '' })}>Editar</button>}
                     {['borrador', 'programado', 'archivado'].includes(c.estado) && <button className="btn primary sm" onClick={() => accion(`/contenidos/${c.id_contenido}/publicar`, 'POST', {})}>Publicar ahora</button>}
                     {c.estado === 'borrador' && <button className="btn ghost sm" onClick={() => setProg(prog?.id === c.id_contenido ? null : { id: c.id_contenido, fecha: '' })}>Programar</button>}
                     {c.estado === 'publicado' && <button className="btn ghost sm" onClick={() => accion(`/contenidos/${c.id_contenido}/archivar`)}>Retirar</button>}

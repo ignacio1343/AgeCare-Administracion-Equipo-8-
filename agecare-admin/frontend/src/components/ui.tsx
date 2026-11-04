@@ -12,7 +12,7 @@ export const PRIORIDADES: Record<string, { label: string; cls: string }> = {
   alta: { label: 'Alta', cls: 'serious' }, critica: { label: 'Crítica', cls: 'crit' },
 }
 export const CANALES: Record<string, string> = { app: 'App', correo: 'Correo', telefono: 'Teléfono', consola: 'Consola' }
-export const PERFILES: Record<string, string> = { familiar: 'Familiar', cuidadora: 'Cuidadora', adulto_mayor: 'Adulto mayor', medico: 'Médico' }
+export const PERFILES: Record<string, string> = { familiar: 'Familiar (representante)', cuidadora: 'Cuidador/a', adulto_mayor: 'Adulto mayor (residente)', medico: 'Médico' }
 export const ROLES: Record<string, string> = { admin: 'Administrador', analista: 'Analista', soporte: 'Agente de soporte', editor: 'Editor de contenido', moderador: 'Moderador' }
 
 export function EstadoChip({ estado }: { estado: string }) {

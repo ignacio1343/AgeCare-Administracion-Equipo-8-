@@ -302,5 +302,102 @@ def cargar(db, rnd: random.Random | None = None) -> list[str]:
                     if rnd.random() < .75:
                         m.estado, m.fecha_lectura = "leido", m.fecha_entrega + timedelta(minutes=rnd.uniform(.5, 25))
         hechos.append(f"{n} avisos por WhatsApp a familiares")
+    hechos += cargar_portal(db, now)
     db.commit()
+    return hechos
+
+
+# ---------------------------------------------------------------- v0.6 · portal web
+PORTAL = {  # cuentas demo del portal (README): correo, clave, RUT
+    "representante": ("representante@agecare.cl", "Portal123!", 16_543_210),
+    "residente": ("residente@agecare.cl", "Residente123!", 4_876_543),
+    "residente2": ("residente2@agecare.cl", "Residente123!", 5_123_456),
+    "cuidador": ("cuidador@agecare.cl", "Cuidador123!", 17_654_321),
+}
+
+
+def cargar_portal(db, now) -> list[str]:
+    """Una familia completa para mostrar el portal: representante con dos residentes (Platino y Dorado), un cuidador
+    con historial de la ficha vital, eventos publicados y tickets que llegaron desde el portal."""
+    from app import portal
+    from app.models import MembresiaCirculo, NotificacionApp, RegistroVital, UsuarioPerfil
+    from app.rut import dv
+    from app.security import hash_password
+    hechos = []
+    if not db.scalar(select(func.count()).where(Contenido.tipo == "evento")):
+        eventos = [("Taller de memoria y juegos", "Ejercicios de estimulación cognitiva en grupo, con té y galletas.",
+                    "Sala multiuso, primer piso", 2, 16),
+                   ("Bingo solidario de la comunidad", "Premios donados por las familias. Cartón gratis para residentes.",
+                    "Comedor principal", 5, 15),
+                   ("Visita del coro municipal", "El coro interpreta boleros y tonadas. Pueden venir las familias.",
+                    "Patio central", 9, 11)]
+        for t, c, lugar, dias, hora in eventos:
+            fecha = (now + timedelta(days=dias)).replace(hour=hora + 3, minute=0, second=0, microsecond=0)  # hora Chile
+            db.add(Contenido(tipo="evento", titulo=t, cuerpo=c, lugar=lugar, fecha_evento=fecha, etiquetas="eventos",
+                             estado="publicado", fecha_publicacion=now - timedelta(days=1), fecha_creacion=now - timedelta(days=2)))
+        hechos.append("eventos del portal")
+    email_rep, clave_rep, rut_rep = PORTAL["representante"]
+    if db.scalar(select(UsuarioApp.id_usuario).where(UsuarioApp.email == email_rep)):
+        db.flush()
+        return hechos
+
+    def cuenta(clave, nombres, ap1, ap2, email, rut, perfil, tel=None):
+        u = UsuarioApp(nombre=portal.nombre_completo(nombres, ap1, ap2), nombres=nombres, primer_apellido=ap1,
+                       segundo_apellido=ap2, email=email, rut=f"{rut}-{dv(str(rut))}", telefono=tel,
+                       password_hash=hash_password(clave), origen="portal", fecha_registro=now - timedelta(days=20),
+                       ultimo_acceso=now - timedelta(hours=3))
+        db.add(u)
+        db.flush()
+        db.add(UsuarioPerfil(id_usuario=u.id_usuario, codigo_perfil=perfil))
+        return u
+
+    rep = cuenta(clave_rep, "Carolina", "Gutiérrez", "Lagos", email_rep, rut_rep, "familiar", "+56912340001")
+    rep.whatsapp_habilitado, rep.whatsapp_verificado = True, now - timedelta(days=20)
+    rep.fecha_aceptacion_terminos = now - timedelta(days=20)
+    rep.id_version_terminos = db.scalar(select(VersionLegal.id_version).where(VersionLegal.tipo_documento == "terminos")
+                                        .order_by(VersionLegal.id_version.desc()).limit(1))
+    cuid = cuenta(PORTAL["cuidador"][1], "Javier", "Morales", "Pinto", PORTAL["cuidador"][0], PORTAL["cuidador"][2],
+                  "cuidadora", "+56912340002")
+    cuenta_rep = portal.cuenta_familia(db, rep)
+    residentes = []
+    for clave_k, nombre, ap2, nac, plan in (("residente", "Rosa", "Fuentes", date(1942, 3, 14), "platino"),
+                                            ("residente2", "Manuel", "Fuentes", date(1939, 11, 2), "dorado")):
+        email, clave, rut = PORTAL[clave_k]
+        u = cuenta(clave, nombre, "Gutiérrez", ap2, email, rut, "adulto_mayor")
+        p = Paciente(nombre=u.nombre, rut=u.rut, primer_nombre=nombre, primer_apellido="Gutiérrez", segundo_apellido=ap2,
+                     fecha_nacimiento=nac, id_usuario=u.id_usuario, fecha_alta=now - timedelta(days=19))
+        db.add(p)
+        db.flush()
+        for quien, rol in ((rep, "familiar"), (cuid, "cuidadora")):
+            db.add(MembresiaCirculo(id_usuario=quien.id_usuario, id_paciente=p.id_paciente, rol_en_circulo=rol, estado="activo",
+                                    fecha_invitacion=now - timedelta(days=19), fecha_aceptacion=now - timedelta(days=19)))
+        s = portal.nueva_suscripcion(db, cuenta_rep, plan, p.id_paciente)
+        s.fecha_inicio = s.inicio_periodo = now - timedelta(days=19)
+        s.fin_periodo = now + timedelta(days=11)
+        db.add(TransaccionPago(id_suscripcion=s.id_suscripcion, monto=s.plan.precio, estado="aprobada",
+                               medio_pago="Webpay · tarjeta ****6623", fecha=now - timedelta(days=19),
+                               id_externo_pasarela=f"wp_demo_{p.id_paciente}"))
+        residentes.append(p)
+    historia = [(4, "normal", "Durmió bien, desayunó completo y salió a caminar al patio."),
+                (3, "alerta", "Presión algo alta en la tarde (150/90). Se controla de nuevo en 2 horas."),
+                (3, "normal", "Presión normalizada (128/82) tras el descanso."),
+                (1, "normal", "Participó en el taller de memoria. Ánimo bueno."),
+                (0, "normal", "Almorzó bien y tomó sus medicamentos a la hora.")]
+    for dias, estado, obs in historia:
+        for i, p in enumerate(residentes):
+            db.add(RegistroVital(id_paciente=p.id_paciente, id_usuario_cuidador=cuid.id_usuario, estado=estado,
+                                 observacion=obs, fecha=now - timedelta(days=dias, hours=6 - i * 2)))
+    db.add(NotificacionApp(id_usuario=rep.id_usuario, tipo="sistema", titulo="¡Bienvenida a AgeCare!",
+                           cuerpo="Desde aquí ves a tus residentes, sus planes y los avisos de riesgo.",
+                           fecha_creacion=now - timedelta(days=20), fecha_lectura=now - timedelta(days=20)))
+    db.flush()
+    for u, cat, asunto, desc, horas in (
+            (db.get(UsuarioApp, residentes[0].id_usuario), "otros", "Quiero inscribirme en el bingo",
+             "Hola, quiero participar en el bingo solidario. ¿Debo llevar algo?", 5),
+            (db.get(UsuarioApp, residentes[1].id_usuario), "acceso_cuenta", "Olvidé mi contraseña (portal web)",
+             "Solicitud desde «¿Olvidaste tu contraseña?» del portal (residente).", 2)):
+        t = portal.crear_ticket(db, cat, asunto, desc, usuario=u, prioridad="alta" if cat == "acceso_cuenta" else "media")
+        t.fecha_creacion = t.fecha_actualizacion = now - timedelta(hours=horas)
+    db.flush()
+    hechos.append("portal web (representante, 2 residentes, cuidador, ficha vital y tickets desde la app)")
     return hechos

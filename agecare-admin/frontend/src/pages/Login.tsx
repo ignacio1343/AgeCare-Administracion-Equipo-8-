@@ -64,6 +64,7 @@ export default function Login() {
         </button>
         {pideOtp && <button type="button" className="btn link" onClick={() => { setPideOtp(false); setOtp('') }}>Volver</button>}
         <p className="auth-foot">Acceso exclusivo para el equipo de Wellq Co. Toda acción queda registrada.</p>
+        <p className="auth-foot">¿Eres familiar, residente o cuidador? <a href="/portal">Entra al portal de familias</a></p>
       </form>
     </div>
   )

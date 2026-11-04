@@ -74,7 +74,8 @@ PROCESOS = [  # codigo, nombre, cadena, componentes, p95 s, éxito 24 h
      ["api_core", "storage", "music_sync"], 11.4, .992),
 ]
 TIPOS_ALERTA = [("caida", "Caída detectada", "critica"), ("sos", "Botón SOS", "critica"),
-                ("vital", "Signo vital fuera de rango", "alta"), ("medicamento", "Medicamento omitido", "media")]
+                ("vital", "Signo vital fuera de rango", "alta"), ("medicamento", "Medicamento omitido", "media"),
+                ("ficha_vital", "Estado vital informado por el cuidador", "media")]
 UMBRALES = [  # signo, nivel, min, max, unidad   (fuera del rango amarillo = rojo -> alerta)
     ("frecuencia_cardiaca", "verde", 60, 100, "lpm"), ("frecuencia_cardiaca", "amarillo", 50, 120, "lpm"),
     ("saturacion_o2", "verde", 95, 100, "%"), ("saturacion_o2", "amarillo", 90, 100, "%"),
@@ -94,13 +95,17 @@ FUNCIONALIDADES = [  # codigo, nombre, uso bajo esperado, nota
     ("sos", "SOS", True, "Uso bajo por diseño: es un evento de emergencia."),
     ("alertas_whatsapp", "Avisos de salud por WhatsApp al familiar", True,
      "Uso bajo por diseño: solo se envía ante eventos de riesgo."),
+    ("estado_tiempo_real", "Estado vital en tiempo real (portal del representante)", False,
+     "El representante ve el último estado que registró el cuidador, con su observación y la hora."),
 ]
 _BASE = ["inicio_semaforo", "centro_alertas", "vitals", "medicamentos", "checkin", "bitacora", "chat", "fotos",
          "entretenimiento", "sos", "marketplace"]
 PLAN_FUNCIONALIDADES = {
     "gratuito": _BASE,
-    "dorado": _BASE + ["asistente_ia", "documentos", "director_musical"],
-    "platino": _BASE + ["asistente_ia", "documentos", "director_musical", "reportes", "alertas_whatsapp"],
+    # Avisos de riesgo por WhatsApp: Dorado, Platino y Proveedor. Estado en tiempo real: Platino y Proveedor.
+    "dorado": _BASE + ["asistente_ia", "documentos", "director_musical", "alertas_whatsapp"],
+    "platino": _BASE + ["asistente_ia", "documentos", "director_musical", "reportes", "alertas_whatsapp",
+                        "estado_tiempo_real"],
     "proveedor": [f[0] for f in FUNCIONALIDADES],
 }
 PARAMETROS = [  # clave, descripción, categoría, tipo, valor

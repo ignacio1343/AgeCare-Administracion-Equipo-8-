@@ -1,4 +1,4 @@
-# Avisos de salud por WhatsApp al familiar (v0.5.1)
+# Avisos de salud por WhatsApp al familiar (v0.6.0)
 
 Cuando un paciente tiene un evento de salud de riesgo, la consola avisa por WhatsApp a sus familiares del círculo de
 cuidado. Corresponde a las tablas `MENSAJE_WHATSAPP` y `REPRESENTANTE.whatsapp_habilitado` del MER original y a la
@@ -13,6 +13,8 @@ mejora propuesta en el Informe de la Entrega 2.
 | Signo vital fuera del rango amarillo (rojo) | Alerta *crítica* | **Sí** |
 | Caída detectada | Alerta *crítica* | **Sí** |
 | Botón SOS | Alerta *crítica* | **Sí** |
+| El cuidador registra **Riesgoso** en el portal ([`PORTAL.md`](PORTAL.md)) | Alerta *crítica* | **Sí** (y aviso en el portal) |
+| El cuidador registra **Alerta** | Alerta *media* | No |
 
 Los rangos son los del semáforo que el administrador configura en *Configuración → Umbrales de alertas* (CU05).
 
@@ -22,8 +24,8 @@ Se crea un registro por cada miembro del círculo con rol **familiar** y membres
 si se cumplen todas las reglas; si no, queda **omitido** con el motivo, para que soporte pueda explicarlo:
 
 1. El parámetro `whatsapp_activo` está en `true` (*Configuración → Parámetros*).
-2. El plan del paciente incluye la funcionalidad **Avisos de salud por WhatsApp** (por defecto Platino y Proveedor;
-   se cambia en *Planes y suscripciones*).
+2. El plan del paciente incluye la funcionalidad **Avisos de salud por WhatsApp** (por defecto Dorado, Platino y
+   Proveedor; se cambia en *Planes y suscripciones*).
 3. La cuenta del familiar está activa, tiene teléfono y **dio su consentimiento** (*Usuarios de la app → ficha →
    Avisos de salud por WhatsApp*). Cada cambio de consentimiento queda en la auditoría con el teléfono enmascarado.
 4. No recibió otro aviso del mismo paciente en los últimos `whatsapp_minutos_entre_avisos` (30 por defecto).

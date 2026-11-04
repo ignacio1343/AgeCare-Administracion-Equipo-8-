@@ -1,5 +1,38 @@
 # Cambios
 
+## v0.6.0 · 04/11/2026 · Portal web de familias
+
+- **Portal responsivo en `/portal`** con tres vistas: representante, residente y cuidador.
+- **Registro del representante** con correo, RUT (dígito verificador, módulo 11), nombres, primer y segundo
+  apellido, teléfono con selector de país (+56, +54…) y contraseña repetida.
+  - Si el RUT no tiene cuenta, se envía un **código por SMS**: 3 intentos, reenvío cada 60 s, máximo 3 envíos y
+    vence en 10 min. Funciona en modo simulado o con Twilio Verify.
+  - Se registra el consentimiento de los términos (Ley 19.628) y, opcionalmente, el de WhatsApp.
+- **Pasarela de pago real: Webpay Plus de Transbank** (API REST v1.2, entorno de integración).
+  - Contratar, cambiar de plan y **«Pagar mes»**.
+  - El commit se valida contra el monto y la orden. Se manejan la anulación y el tiempo agotado.
+  - El portal muestra un comprobante del pago.
+  - En la consola: *Planes → Pagos del portal*.
+- **Residente por plan**: cuando el pago se aprueba, el representante registra al residente (RUT, primer nombre,
+  apellidos, correo, fecha de nacimiento y contraseña). Puede tener varios residentes y cancelar o contratar de
+  nuevo el plan de cada uno.
+- **Ficha vital del cuidador** (Normal / Alerta / Riesgoso con observación, cuidador y hora).
+  - Riesgoso avisa por **WhatsApp** y con un **aviso en el portal** del representante (banner y campana).
+  - Aplica a los planes **Dorado**, Platino y Proveedor. Dorado se agregó a `alertas_whatsapp`.
+- **Estado vital en tiempo real** para Platino y Proveedor: nueva funcionalidad `estado_tiempo_real`, se actualiza
+  cada 15 s.
+- **Residente**: entra con correo o RUT y ve chistes, noticias y **eventos** (nuevo tipo de contenido con fecha y
+  lugar).
+- **Tickets desde la app**: «¿Olvidaste tu contraseña?» y «Pedir ayuda» crean tickets con canal *App*.
+  Soporte restablece la clave desde la ficha del usuario con una clave temporal que el portal obliga a cambiar.
+- **Consola**:
+  - Admin y soporte crean representantes, cuidadores y residentes (con RUT y apellidos separados) y les asignan
+    residentes.
+  - Las suscripciones muestran el residente.
+- Migración `0004_portal`: 5 tablas nuevas (`sesion_app`, `verificacion_sms`, `registro_vital`, `notificacion_app`,
+  `orden_pago`). El esquema queda en 48 tablas. Datos demo de una familia completa.
+- 116 pruebas automáticas (32 nuevas del portal), cobertura 92 %.
+
 ## v0.5.1 · 26/10/2026 · WhatsApp real con Meta
 
 - **Probar conexión** en *Avisos WhatsApp*: comprueba con Meta el número emisor, el token, el estado de la plantilla

@@ -52,14 +52,31 @@ class Settings(BaseSettings):
     # Clave con la que la Plataforma AgeCare informa eventos de salud (vacía = integración desactivada)
     plataforma_api_key: str = ""
 
+    # Portal web (representante, residente y cuidador) · ver docs/PORTAL.md
+    # Código por SMS al registrarse: «simulado» (el código se muestra en pantalla) o «twilio» (Twilio Verify)
+    sms_modo: str = "simulado"
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_verify_sid: str = ""                # id del servicio de Verify (empieza con VA…)
+    # Pasarela de pago del portal: «simulado» (página de pago de prueba propia) o «webpay» (Transbank Webpay Plus)
+    pagos_modo: str = "simulado"
+    webpay_entorno: str = "integracion"        # integracion (tarjetas de prueba) | produccion
+    # Credenciales públicas del ambiente de integración de Transbank (las publica Transbank para pruebas)
+    webpay_codigo_comercio: str = "597055555532"
+    webpay_api_key: str = "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C"
+    # URL pública de la API (Webpay vuelve aquí tras el pago). Vacía = FRONTEND_URL (rewrite /api/* del sitio)
+    api_public_url: str = ""
+
     # Planificador de tareas en segundo plano (0 = desactivado; los tests lo desactivan)
     planificador_intervalo_seg: int = 60
     zona_horaria: str = "America/Santiago"
-    log_level: str = "INFO"  # registros técnicos (Render los muestra en la pestaña Logs)  # fechas de negocio (vigencias, métricas diarias)
+    log_level: str = "INFO"  # registros técnicos (Render los muestra en la pestaña Logs)
 
     @field_validator("whatsapp_modo", "whatsapp_token", "whatsapp_phone_number_id", "whatsapp_api_version",
                      "whatsapp_plantilla", "whatsapp_idioma", "whatsapp_app_secret", "whatsapp_verify_token",
-                     "whatsapp_waba_id", "plataforma_api_key")
+                     "whatsapp_waba_id", "plataforma_api_key", "sms_modo", "twilio_account_sid",
+                     "twilio_auth_token", "twilio_verify_sid", "pagos_modo", "webpay_entorno", "webpay_codigo_comercio",
+                     "webpay_api_key", "api_public_url")
     @classmethod
     def _sin_espacios(cls, v: str) -> str:
         """Al pegar claves en el panel de Render suelen colarse espacios o saltos de línea: se eliminan."""

@@ -257,7 +257,7 @@ def test_resumen_bitacora_y_permisos(client, auth):
     _evento(client, auth("soporte"), pid, tipo="caida")
     h = auth("analista")  # operación en lectura
     r = client.get(f"{API}/whatsapp/resumen", headers=h).json()
-    assert r["modo"] == "simulado" and r["planes_con_whatsapp"] == ["Platino", "Proveedor"]
+    assert r["modo"] == "simulado" and r["planes_con_whatsapp"] == ["Dorado", "Platino", "Proveedor"]
     assert r["ultimas_24h"]["enviado"] == 1 and r["familiares_habilitados"] == 1
     assert client.get(f"{API}/whatsapp/mensajes", headers=h, params={"q": "humberto"}).json()["total"] == 1
     assert _evento(client, h, pid, tipo="caida").status_code == 403  # analista no puede simular eventos
@@ -365,3 +365,16 @@ def test_variables_de_whatsapp_sin_espacios_ni_saltos(monkeypatch):
     monkeypatch.setenv("WHATSAPP_API_VERSION", "v25.0\r\n")
     s = Settings()
     assert (s.whatsapp_token, s.whatsapp_phone_number_id, s.whatsapp_api_version) == ("EAAabc123", "1264089486797320", "v25.0")
+
+
+def test_webhook_verificacion_ignora_espacios_y_registra_largos(client, monkeypatch, caplog):
+    import logging
+    monkeypatch.setattr(get_settings(), "whatsapp_verify_token", "agecarewebhook2026")
+    url = f"{API}/whatsapp/webhook"
+    r = client.get(url, params={"hub.mode": "subscribe", "hub.verify_token": " agecarewebhook2026 ", "hub.challenge": "7"})
+    assert r.status_code == 200 and r.text == "7"
+    with caplog.at_level(logging.WARNING, logger="whatsapp"):
+        assert client.get(url, params={"hub.mode": "subscribe", "hub.verify_token": "agecarewebhook2025x",
+                                       "hub.challenge": "7"}).status_code == 403
+    msg = [x.getMessage() for x in caplog.records if x.name == "whatsapp"][-1]
+    assert "recibido de 19 caracteres, esperado de 18" in msg and "2025x" not in msg

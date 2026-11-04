@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -23,16 +23,26 @@ M_LECT, M_ESC = requiere("marketplace", "lectura"), requiere("marketplace", "esc
 
 # ================================================================ CU17 / CU18 contenido
 class ContenidoIn(BaseModel):
-    tipo: Literal["chiste", "noticia"]
+    tipo: Literal["chiste", "noticia", "evento"]
     titulo: str = Field(min_length=3, max_length=160)
     cuerpo: str = Field(min_length=10, max_length=4000)
     etiquetas: list[str] = Field(default_factory=list, max_length=10)
+    fecha_evento: datetime | None = None  # obligatorio para «evento»
+    lugar: str | None = Field(None, max_length=160)
+
+    @model_validator(mode="after")
+    def _evento(self):
+        if self.tipo == "evento" and (not self.fecha_evento or not (self.lugar or "").strip()):
+            raise ValueError("Un evento necesita fecha, hora y lugar.")
+        return self
 
 
 class ContenidoUpdateIn(BaseModel):
     titulo: str | None = Field(None, min_length=3, max_length=160)
     cuerpo: str | None = Field(None, min_length=10, max_length=4000)
     etiquetas: list[str] | None = Field(None, max_length=10)
+    fecha_evento: datetime | None = None
+    lugar: str | None = Field(None, max_length=160)
 
 
 class PublicarIn(BaseModel):
@@ -49,6 +59,8 @@ class ContenidoOut(BaseModel):
     fecha_programada: datetime | None
     fecha_publicacion: datetime | None
     fecha_creacion: datetime
+    fecha_evento: datetime | None = None
+    lugar: str | None = None
 
 
 def _tags(v: list[str] | None) -> str | None:
@@ -59,7 +71,7 @@ def contenido_out(c: Contenido) -> ContenidoOut:
     return ContenidoOut(id_contenido=c.id_contenido, tipo=c.tipo, titulo=c.titulo, cuerpo=c.cuerpo,
                         etiquetas=c.etiquetas.split(",") if c.etiquetas else [], estado=c.estado,
                         fecha_programada=c.fecha_programada, fecha_publicacion=c.fecha_publicacion,
-                        fecha_creacion=c.fecha_creacion)
+                        fecha_creacion=c.fecha_creacion, fecha_evento=c.fecha_evento, lugar=c.lugar)
 
 
 def publicar_programados(db: Session) -> int:
@@ -92,7 +104,9 @@ def listar_contenido(tipo: str | None = None, estado: str | None = None, q: str 
 
 @router.post("/contenidos", response_model=ContenidoOut, status_code=201, summary="CU17 · Crear contenido (borrador)")
 def crear_contenido(data: ContenidoIn, request: Request, staff: MiembroStaff = Depends(C_ESC), db: Session = Depends(get_db)):
-    c = Contenido(tipo=data.tipo, titulo=data.titulo.strip(), cuerpo=data.cuerpo.strip(), etiquetas=_tags(data.etiquetas))
+    c = Contenido(tipo=data.tipo, titulo=data.titulo.strip(), cuerpo=data.cuerpo.strip(), etiquetas=_tags(data.etiquetas),
+                  fecha_evento=data.fecha_evento if data.tipo == "evento" else None,
+                  lugar=data.lugar.strip() if data.tipo == "evento" and data.lugar else None)
     db.add(c)
     db.flush()
     registrar(db, actor=staff, accion="contenido.crear", tipo_entidad="contenido", id_entidad=c.id_contenido,
@@ -107,10 +121,15 @@ def editar_contenido(id_contenido: int, data: ContenidoUpdateIn, request: Reques
     c = obtener(db, Contenido, id_contenido, "El contenido")
     if c.fecha_eliminacion:
         raise ApiError(404, "NOT_FOUND", "El contenido no existe.")
-    antes = snap(c, ["titulo", "cuerpo", "etiquetas"])
+    campos = ["titulo", "cuerpo", "etiquetas", "fecha_evento", "lugar"]
+    antes = snap(c, campos)
     for k, v in data.model_dump(exclude_unset=True).items():
+        if k in ("fecha_evento", "lugar"):
+            if c.tipo == "evento" and v:
+                setattr(c, k, v.strip() if isinstance(v, str) else v)
+            continue
         setattr(c, k, _tags(v) if k == "etiquetas" else v.strip())
-    a, d = diff(antes, snap(c, ["titulo", "cuerpo", "etiquetas"]))
+    a, d = diff(antes, snap(c, campos))
     if d:
         registrar(db, actor=staff, accion="contenido.editar", tipo_entidad="contenido", id_entidad=c.id_contenido,
                   antes=a, despues=d, request=request)

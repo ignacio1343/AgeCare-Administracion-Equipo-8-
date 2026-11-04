@@ -224,7 +224,7 @@ def test_versiones_legales(client, auth):
 
 def test_health_y_health_db(client):
     r = client.get(f"{API}/health")
-    assert r.status_code == 200 and r.json()["version"] == "0.5.1"
+    assert r.status_code == 200 and r.json()["version"] == "0.6.0"
     r = client.get(f"{API}/health/db")
     assert r.status_code == 200 and r.json()["db_ms"] >= 0
 
@@ -235,3 +235,29 @@ def test_registro_de_acceso_una_linea_sin_query(client, caplog):
         client.get(f"{API}/auth/me?token=secreto")
     linea = [r.getMessage() for r in caplog.records if r.name == "acceso"][-1]
     assert linea.startswith("GET /api/v1/auth/me 401 ") and "rid=" in linea and "secreto" not in linea
+
+
+def test_simular_pago_desde_la_consola(client, auth):
+    from app.models import CuentaCliente, EventoPago, Suscripcion
+    with SessionLocal() as db:
+        u = db.query(UsuarioApp).filter_by(email="ana@example.com").one()
+        c = CuentaCliente(id_usuario=u.id_usuario, tipo_cuenta="familia", nombre="Familia Pérez", email_facturacion=u.email)
+        db.add(c)
+        db.flush()
+        s = Suscripcion(id_cuenta=c.id_cuenta, codigo_plan="platino", id_externo_pasarela="sub_sim_1",
+                        fin_periodo=utcnow() + timedelta(days=3))
+        db.add(s)
+        db.commit()
+        sid = s.id_suscripcion
+    h = auth("admin")
+    r = client.post(f"{API}/comercial/suscripciones/{sid}/simular-pago", headers=h, json={"resultado": "rechazado"})
+    assert r.status_code == 201 and r.json()["procesado"] and r.json()["estado_suscripcion"] == "en_mora"
+    r = client.post(f"{API}/comercial/suscripciones/{sid}/simular-pago", headers=h, json={"resultado": "aprobado"})
+    body = r.json()
+    assert body["estado_suscripcion"] == "activa" and body["id_transaccion"]
+    tx = client.get(f"{API}/comercial/transacciones/{body['id_transaccion']}", headers=h).json()
+    assert tx["estado"] == "aprobada" and tx["monto"] == 10000  # precio del plan Platino
+    with SessionLocal() as db:
+        assert db.query(EventoPago).filter(EventoPago.id_externo_evento.like("evt_sim_%")).count() == 2
+    assert client.post(f"{API}/comercial/suscripciones/{sid}/simular-pago", headers=auth("analista"),
+                       json={"resultado": "aprobado"}).status_code == 403

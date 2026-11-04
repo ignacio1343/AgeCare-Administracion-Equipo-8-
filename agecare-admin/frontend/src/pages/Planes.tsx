@@ -6,7 +6,7 @@ import { Card, Cargando, Chip, clp, ErrorBox, fecha, fechaHora, Paginacion, Tabs
 interface Plan { codigo_plan: string; nombre: string; precio: number; moneda: string; unidad_facturable: string; periodicidad: string; activo: boolean; funcionalidades: string[]; suscripciones_activas: number }
 interface Func { codigo: string; nombre: string }
 interface Suscripcion { id_suscripcion: number; id_cuenta: number; cuenta: string; tipo_cuenta: string; codigo_plan: string; plan: string; precio: number; estado: string
-  fecha_inicio: string; inicio_periodo: string; fin_periodo: string; fecha_cancelacion: string | null; motivo_cancelacion: string | null }
+  fecha_inicio: string; inicio_periodo: string; fin_periodo: string; fecha_cancelacion: string | null; motivo_cancelacion: string | null; residente: string | null }
 interface Reembolso { id_reembolso: number; monto: number; motivo: string; estado: string; autorizador: string; fecha: string }
 interface Transaccion { id_transaccion: number; id_suscripcion: number; cuenta: string; plan: string; monto: number; moneda: string; estado: string; fecha: string
   medio_pago: string | null; codigo_error: string | null; id_externo_pasarela: string | null; reembolsado: number; reembolsable: number; reembolsos: Reembolso[] }
@@ -158,6 +158,7 @@ function TabSuscripciones({ escribe, planes }: { escribe: boolean; planes: Plan[
   const [data, setData] = useState<Page<Suscripcion> | null>(null)
   const [f, setF] = useState({ estado: '', plan: '', page: 1 })
   const [cancel, setCancel] = useState<{ id: number; motivo: string } | null>(null)
+  const [pago, setPago] = useState<number | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [aviso, setAviso] = useState('')
   const cargar = () => api<Page<Suscripcion>>('/comercial/suscripciones', { query: { ...f, page_size: 15 } }).then(setData).catch(setError)
@@ -166,6 +167,19 @@ function TabSuscripciones({ escribe, planes }: { escribe: boolean; planes: Plan[
   const cambiar = async (s: Suscripcion, codigo_plan: string) => {
     setError(null); setAviso('')
     try { await api(`/comercial/suscripciones/${s.id_suscripcion}/plan`, { method: 'PATCH', body: { codigo_plan } }); setAviso(`${s.cuenta}: plan cambiado.`); cargar() } catch (e) { setError(e) }
+  }
+  // Demo: la consola actúa como la pasarela y envía un webhook firmado (mismo proceso que un pago real)
+  const simularPago = async (s: Suscripcion, resultado: 'aprobado' | 'rechazado') => {
+    setError(null); setAviso('')
+    try {
+      const r = await api<{ id_evento: string; estado_suscripcion: string }>(`/comercial/suscripciones/${s.id_suscripcion}/simular-pago`,
+        { method: 'POST', body: { resultado } })
+      setPago(null)
+      setAviso(resultado === 'aprobado'
+        ? `${s.cuenta}: pago aprobado por ${clp(s.precio)}. La suscripción queda ${r.estado_suscripcion} y el periodo se renueva (evento ${r.id_evento}).`
+        : `${s.cuenta}: pago rechazado (fondos insuficientes). La suscripción queda ${r.estado_suscripcion.replace('_', ' ')} (evento ${r.id_evento}).`)
+      cargar()
+    } catch (e) { setError(e) }
   }
   const cancelar = async (e: FormEvent) => {
     e.preventDefault(); if (!cancel) return; setError(null)
@@ -191,15 +205,24 @@ function TabSuscripciones({ escribe, planes }: { escribe: boolean; planes: Plan[
               return (
                 <Fragment key={s.id_suscripcion}>
                   <tr>
-                    <td><div className="strong">{s.cuenta}</div><div className="sub">{s.tipo_cuenta}</div></td>
+                    <td><div className="strong">{s.cuenta}</div><div className="sub">{s.tipo_cuenta}{s.residente ? ` · residente: ${s.residente}` : ''}</div></td>
                     <td>{escribe && vigente ? (
                       <select value={s.codigo_plan} onChange={e => cambiar(s, e.target.value)} aria-label={`Plan de ${s.cuenta}`}>
                         {planes.filter(p => p.activo || p.codigo_plan === s.codigo_plan).map(p => <option key={p.codigo_plan} value={p.codigo_plan}>{p.nombre} · {clp(p.precio)}</option>)}</select>
                     ) : <>{s.plan}<div className="sub">{clp(s.precio)}</div></>}</td>
                     <td><Chip estado={s.estado} />{s.motivo_cancelacion && <div className="sub">{s.motivo_cancelacion}</div>}</td>
                     <td className="nowrap">{fecha(s.inicio_periodo)} → {fecha(s.fin_periodo)}</td>
-                    <td className="right">{escribe && vigente && <button className="btn ghost sm danger" onClick={() => setCancel(cancel?.id === s.id_suscripcion ? null : { id: s.id_suscripcion, motivo: '' })}>Cancelar</button>}</td>
+                    <td className="right nowrap">{escribe && vigente && <>
+                      {s.precio > 0 && <><button className="btn ghost sm" onClick={() => { setCancel(null); setPago(pago === s.id_suscripcion ? null : s.id_suscripcion) }}>Simular pago</button>{' '}</>}
+                      <button className="btn ghost sm danger" onClick={() => { setPago(null); setCancel(cancel?.id === s.id_suscripcion ? null : { id: s.id_suscripcion, motivo: '' }) }}>Cancelar</button></>}</td>
                   </tr>
+                  {pago === s.id_suscripcion && (
+                    <tr><td colSpan={5}><div className="mod-form">
+                      <span className="small muted">Simula que la pasarela informa el cobro mensual de {clp(s.precio)}:</span>
+                      <button className="btn primary sm" onClick={() => simularPago(s, 'aprobado')}>✔ Pago aprobado</button>
+                      <button className="btn ghost sm danger" onClick={() => simularPago(s, 'rechazado')}>✖ Pago rechazado</button>
+                    </div></td></tr>
+                  )}
                   {cancel?.id === s.id_suscripcion && (
                     <tr><td colSpan={5}><form className="mod-form" onSubmit={cancelar}>
                       <input placeholder="Motivo de la cancelación (mín. 5 caracteres)" value={cancel.motivo} onChange={e => setCancel({ ...cancel, motivo: e.target.value })} required minLength={5} aria-label="Motivo" />
@@ -301,7 +324,7 @@ function TabEventos() {
   )
 }
 
-type Tab = 'planes' | 'cuentas' | 'suscripciones' | 'transacciones' | 'eventos'
+type Tab = 'planes' | 'cuentas' | 'suscripciones' | 'transacciones' | 'eventos' | 'portal'
 export default function Planes() {
   const { puede } = useAuth()
   const escribe = puede('comercial', 'escritura')
@@ -322,12 +345,51 @@ export default function Planes() {
           <div className="kpi"><div className="kpi-label">Cancelaciones · 30 d</div><div className="kpi-value">{res.canceladas_30d}</div></div>
         </div>
       )}
-      <Tabs value={tab} onChange={setTab} items={[['planes', 'Planes'], ['cuentas', 'Cuentas'], ['suscripciones', 'Suscripciones'], ['transacciones', 'Transacciones'], ['eventos', 'Eventos de pago']]} />
+      <Tabs value={tab} onChange={setTab} items={[['planes', 'Planes'], ['cuentas', 'Cuentas'], ['suscripciones', 'Suscripciones'], ['transacciones', 'Transacciones'], ['eventos', 'Eventos de pago'], ['portal', 'Pagos del portal (Webpay)']]} />
       {tab === 'planes' && <TabPlanes escribe={escribe} />}
       {tab === 'cuentas' && <TabCuentas escribe={escribe} planes={planes} />}
       {tab === 'suscripciones' && <TabSuscripciones escribe={escribe} planes={planes} />}
       {tab === 'transacciones' && <TabTransacciones escribe={escribe} />}
       {tab === 'eventos' && <TabEventos />}
+      {tab === 'portal' && <TabOrdenesPortal />}
     </>
+  )
+}
+
+
+interface OrdenPortal { orden_compra: string; representante: string; plan: string; tipo: string; monto: number; proveedor: string; estado: string
+  tarjeta: string | null; codigo_autorizacion: string | null; detalle: string | null; fecha_creacion: string; fecha_confirmacion: string | null }
+const ESTADO_ORDEN: Record<string, string> = { aprobada: 'ok', rechazada: 'crit', anulada: 'muted', error: 'warn', iniciada: 'info' }
+
+// Pagos que los representantes inician en el portal (Webpay Plus o pasarela simulada)
+function TabOrdenesPortal() {
+  const [data, setData] = useState<Page<OrdenPortal> | null>(null)
+  const [page, setPage] = useState(1)
+  const [estado, setEstado] = useState('')
+  const [error, setError] = useState<unknown>(null)
+  useEffect(() => { api<Page<OrdenPortal>>('/comercial/ordenes-portal', { query: { page, estado, page_size: 20 } }).then(setData).catch(setError) }, [page, estado])
+  return (
+    <Card title="Pagos del portal" sub="Órdenes que los representantes pagan en Webpay Plus al contratar, cambiar o renovar el plan de un residente">
+      <div className="filters">
+        <select value={estado} onChange={e => { setEstado(e.target.value); setPage(1) }} aria-label="Estado"><option value="">Estado</option>
+          {['iniciada', 'aprobada', 'rechazada', 'anulada', 'error'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+      </div>
+      <ErrorBox error={error} />
+      {!data ? <Cargando /> : (
+        <>
+          <div className="table-wrap"><table className="data">
+            <thead><tr><th>Fecha</th><th>Orden</th><th>Representante</th><th>Plan</th><th>Monto</th><th>Estado</th></tr></thead>
+            <tbody>{data.items.map(o => (
+              <tr key={o.orden_compra}><td className="nowrap">{fechaHora(o.fecha_creacion)}</td>
+                <td className="mono">{o.orden_compra}<div className="sub">{o.proveedor === 'webpay' ? 'Webpay Plus' : 'Simulada'}</div></td>
+                <td>{o.representante}</td><td>{o.plan}<div className="sub">{o.tipo}</div></td><td>{clp(o.monto)}</td>
+                <td><span className={`chip ${ESTADO_ORDEN[o.estado] ?? 'neutral'}`}>{o.estado}</span>
+                  <div className="sub">{o.tarjeta ? `•••• ${o.tarjeta}` : ''}{o.codigo_autorizacion ? ` · aut. ${o.codigo_autorizacion}` : ''}{o.detalle ? ` ${o.detalle}` : ''}</div></td></tr>
+            ))}</tbody>
+          </table>{!data.items.length && <p className="empty">Todavía no hay pagos desde el portal.</p>}</div>
+          <Paginacion page={data.page} pageSize={data.page_size} total={data.total} onChange={setPage} />
+        </>
+      )}
+    </Card>
   )
 }
