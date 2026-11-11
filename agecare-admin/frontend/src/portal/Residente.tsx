@@ -55,7 +55,7 @@ export function InicioResidente() {
         </div>
       )}
       <section className="p-tarjeta p-ayuda-cta">
-        <div><h2>¿Necesitas ayuda?</h2><p>Escríbenos y el equipo de soporte te responderá.</p></div>
+        <div><h2>¿Necesitas ayuda?</h2><p>Escríbenos y el equipo de soporte te responderá. Las respuestas están en <Link to="/portal/solicitudes">Mis solicitudes</Link>.</p></div>
         <Link to="/portal/ayuda" className="p-btn primario grande">Pedir ayuda</Link>
       </section>
     </div>
@@ -85,7 +85,9 @@ export function Ayuda() {
       <section className="p-tarjeta angosta">
         <h1>Pedir ayuda</h1>
         <p className="p-sub">Tu mensaje llega al equipo de soporte de AgeCare como una solicitud (ticket).</p>
-        {hecho ? <><div className="p-alerta ok">{hecho}</div><Link to={volver} className="p-btn primario grande">Volver al inicio</Link></> : (
+        {hecho ? <><div className="p-alerta ok">{hecho}</div>
+          <div className="p-acciones"><Link to="/portal/solicitudes" className="p-btn primario grande">Ver mis solicitudes</Link>
+            <Link to={volver} className="p-centro">Volver al inicio</Link></div></> : (
           <form onSubmit={enviar} className="p-form">
             {error && <div className="p-alerta crit">{error}</div>}
             <label className="p-campo"><span>¿Sobre qué es?</span>

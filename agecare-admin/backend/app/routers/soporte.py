@@ -2,10 +2,11 @@
 · CU39 responder · CU40 encuesta de satisfacción."""
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
+from .. import portal
 from ..audit import diff, registrar
 from ..db import get_db, utcnow
 from ..deps import permisos_de, requiere
@@ -48,7 +49,10 @@ def respuesta_out(r: RespuestaTicket) -> RespuestaOut:
     if r.tipo_autor == "staff":
         nombre = r.autor.nombre_completo if r.autor else "Staff"
     elif r.tipo_autor == "usuario":
-        nombre = (r.ticket.usuario.nombre if r.ticket.usuario else r.ticket.nombre_solicitante) or "Usuario"
+        if r.autor_usuario is not None and r.autor_usuario.id_usuario != r.ticket.id_usuario:
+            nombre = f"{r.autor_usuario.nombre} (representante)"
+        else:
+            nombre = (r.ticket.usuario.nombre if r.ticket.usuario else r.ticket.nombre_solicitante) or "Usuario"
     else:
         nombre = "Sistema"
     return RespuestaOut(id_respuesta=r.id_respuesta, tipo_autor=r.tipo_autor, autor_nombre=nombre, cuerpo=r.cuerpo,
@@ -207,12 +211,13 @@ def detalle(ref: str, _: MiembroStaff = Depends(LECTURA), db: Session = Depends(
 
 # ---------------------------------------------------------------- CU37 (+ CU40)
 @router.patch("/tickets/{ref}", response_model=TicketOut, summary="CU37 · Atender ticket (estado, prioridad, asignación)")
-def actualizar(ref: str, data: TicketUpdateIn, request: Request, staff: MiembroStaff = Depends(ESCRITURA),
-               db: Session = Depends(get_db)):
+def actualizar(ref: str, data: TicketUpdateIn, request: Request, tareas: BackgroundTasks,
+               staff: MiembroStaff = Depends(ESCRITURA), db: Session = Depends(get_db)):
     t = _get(db, ref)
     antes = _snap(t)
     enviados = data.model_fields_set
     now = utcnow()
+    correos: list[dict] = []
 
     if "codigo_categoria" in enviados and data.codigo_categoria:
         if db.get(CategoriaTicket, data.codigo_categoria) is None:
@@ -240,7 +245,12 @@ def actualizar(ref: str, data: TicketUpdateIn, request: Request, staff: MiembroS
             if t.encuesta is None:  # CU40: se envía la encuesta CSAT (envío simulado)
                 db.add(EncuestaSatisfaccion(id_ticket=t.id_ticket, fecha_envio=now))
                 db.add(RespuestaTicket(id_ticket=t.id_ticket, tipo_autor="sistema", es_interna=True,
-                                       cuerpo="Se envió la encuesta de satisfacción al usuario."))
+                                       cuerpo="Se envió la encuesta de satisfacción al usuario (portal → Mis solicitudes)."))
+            correos = portal.avisar_ticket(db, t, "resuelto", "Si quedó resuelto, cuéntanos cómo te atendimos: "
+                                                              "califica la atención en Mis solicitudes.")
+        if data.estado == "esperando_usuario":
+            correos = portal.avisar_ticket(db, t, "esperando_usuario", "Entra a Mis solicitudes en el portal y "
+                                                                       "responde para que podamos continuar.")
         if anterior == "resuelto" and data.estado == "en_curso":
             t.fecha_resolucion = None
         if data.estado == "cerrado":
@@ -252,6 +262,8 @@ def actualizar(ref: str, data: TicketUpdateIn, request: Request, staff: MiembroS
                   antes=a, despues=d, request=request)
     db.commit()
     db.refresh(t)
+    if correos:
+        tareas.add_task(portal.enviar_correos_ticket, correos)
     return ticket_out(t)
 
 
@@ -264,8 +276,8 @@ def conversacion(ref: str, _: MiembroStaff = Depends(LECTURA), db: Session = Dep
 
 @router.post("/tickets/{ref}/respuestas", response_model=RespuestaOut, status_code=201,
              summary="CU39 · Responder ticket o agregar nota interna")
-def responder(ref: str, data: RespuestaIn, request: Request, staff: MiembroStaff = Depends(ESCRITURA),
-              db: Session = Depends(get_db)):
+def responder(ref: str, data: RespuestaIn, request: Request, tareas: BackgroundTasks,
+              staff: MiembroStaff = Depends(ESCRITURA), db: Session = Depends(get_db)):
     t = _get(db, ref)
     if t.estado == "cerrado":
         raise ApiError(409, "TICKET_CLOSED", "El ticket está cerrado y no admite nuevas respuestas.")
@@ -281,6 +293,9 @@ def responder(ref: str, data: RespuestaIn, request: Request, staff: MiembroStaff
     db.flush()
     registrar(db, actor=staff, accion="ticket.nota_interna" if data.es_interna else "ticket.responder",
               tipo_entidad="ticket", id_entidad=t.id_ticket, despues={"id_respuesta": r.id_respuesta}, request=request)
+    correos = [] if data.es_interna else portal.avisar_ticket(db, t, "respuesta", r.cuerpo)
     db.commit()
     db.refresh(r)
+    if correos:  # aviso en el portal (ya guardado) y correo al solicitante en segundo plano
+        tareas.add_task(portal.enviar_correos_ticket, correos)
     return respuesta_out(r)

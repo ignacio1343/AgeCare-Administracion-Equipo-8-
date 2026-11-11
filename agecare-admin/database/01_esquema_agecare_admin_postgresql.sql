@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict i8WNJkv2LbCgmFeNlotBerGunZdIxauvQKwagAbnZEQepSgbrsI0CVu1C6yNWlx
+\restrict bTKfswwZ4oBFNdRs3bzXzrSsANM2W6QdJITrrlZK0jFo3DpVhY6RVjfTJmLzun5
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -539,7 +539,8 @@ CREATE TABLE public.notificacion_app (
     cuerpo character varying(1000) NOT NULL,
     fecha_creacion timestamp with time zone NOT NULL,
     fecha_lectura timestamp with time zone,
-    CONSTRAINT ck_notificacion_tipo CHECK (((tipo)::text = ANY ((ARRAY['estado_riesgoso'::character varying, 'alerta_salud'::character varying, 'pago'::character varying, 'plan'::character varying, 'sistema'::character varying])::text[])))
+    enlace character varying(200),
+    CONSTRAINT ck_notificacion_tipo CHECK (((tipo)::text = ANY ((ARRAY['estado_riesgoso'::character varying, 'alerta_salud'::character varying, 'pago'::character varying, 'plan'::character varying, 'sistema'::character varying, 'soporte'::character varying])::text[])))
 );
 
 
@@ -932,6 +933,7 @@ CREATE TABLE public.respuesta_ticket (
     tipo_autor character varying(30) NOT NULL,
     es_interna boolean NOT NULL,
     fecha timestamp with time zone NOT NULL,
+    id_usuario_autor integer,
     CONSTRAINT ck_respuesta_autor CHECK (((tipo_autor)::text = ANY ((ARRAY['staff'::character varying, 'usuario'::character varying, 'sistema'::character varying])::text[])))
 );
 
@@ -2442,6 +2444,14 @@ ALTER TABLE ONLY public.paciente
 
 
 --
+-- Name: respuesta_ticket fk_respuesta_usuario_autor; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.respuesta_ticket
+    ADD CONSTRAINT fk_respuesta_usuario_autor FOREIGN KEY (id_usuario_autor) REFERENCES public.usuario_app(id_usuario);
+
+
+--
 -- Name: suscripcion fk_suscripcion_paciente; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2805,5 +2815,5 @@ ALTER TABLE ONLY public.version_legal
 -- PostgreSQL database dump complete
 --
 
-\unrestrict i8WNJkv2LbCgmFeNlotBerGunZdIxauvQKwagAbnZEQepSgbrsI0CVu1C6yNWlx
+\unrestrict bTKfswwZ4oBFNdRs3bzXzrSsANM2W6QdJITrrlZK0jFo3DpVhY6RVjfTJmLzun5
 

@@ -76,6 +76,7 @@ class NotificacionOut(BaseModel):
     id_paciente: int | None
     fecha_creacion: datetime
     leida: bool
+    enlace: str | None = None
 
 
 class NotificacionesOut(BaseModel):
@@ -477,7 +478,8 @@ def notificaciones(u: UsuarioApp = Depends(CUALQUIERA), db: Session = Depends(ge
                                                     NotificacionApp.fecha_lectura.is_(None)))
     return NotificacionesOut(sin_leer=sin_leer or 0, items=[
         NotificacionOut(id_notificacion=n.id_notificacion, tipo=n.tipo, titulo=n.titulo, cuerpo=n.cuerpo,
-                        id_paciente=n.id_paciente, fecha_creacion=n.fecha_creacion, leida=n.fecha_lectura is not None)
+                        id_paciente=n.id_paciente, fecha_creacion=n.fecha_creacion, leida=n.fecha_lectura is not None,
+                        enlace=n.enlace)
         for n in rows])
 
 
@@ -563,7 +565,8 @@ def pedir_ayuda(data: AyudaIn, request: Request, u: UsuarioApp = Depends(CUALQUI
     registrar(db, actor=None, accion="portal.ayuda", tipo_entidad="ticket", id_entidad=t.numero,
               despues={"categoria": data.categoria, "usuario": u.id_usuario}, request=request)
     db.commit()
-    return AyudaOut(numero=t.numero, mensaje=f"Recibimos tu solicitud #{t.numero}. Soporte te responderá pronto.")
+    return AyudaOut(numero=t.numero, mensaje=f"Recibimos tu solicitud #{t.numero}. Verás la respuesta de soporte en "
+                                             "«Mis solicitudes» y te avisaremos por correo.")
 
 
 # ================================================================ cuidador
@@ -634,3 +637,141 @@ def historial(id_paciente: int, u: UsuarioApp = Depends(CUIDADOR), db: Session =
                       .order_by(RegistroVital.fecha.desc(), RegistroVital.id_registro.desc()).limit(30)).all()
     return [RegistroVitalOut(**portal.registro_out(r)) for r in regs]
 
+
+
+# ================================================================ v0.7 · «Mis solicitudes» (CU57)
+ESTADO_TICKET = {"abierto": "Recibida", "en_curso": "En atención", "esperando_usuario": "Espera tu respuesta",
+                 "resuelto": "Resuelta", "cerrado": "Cerrada"}
+
+
+class SolicitudOut(BaseModel):
+    numero: int
+    asunto: str
+    categoria: str
+    estado: str
+    estado_texto: str
+    fecha_creacion: datetime
+    fecha_actualizacion: datetime
+    solicitante: str
+    es_mia: bool
+    residente: str | None
+    respuestas_soporte: int
+    encuesta_pendiente: bool
+
+
+class MensajeOut(BaseModel):
+    autor: str
+    de_soporte: bool
+    cuerpo: str
+    fecha: datetime
+
+
+class EncuestaPortalOut(BaseModel):
+    puntaje: int | None
+    comentario: str | None
+    fecha_respuesta: datetime | None
+
+
+class SolicitudDetalleOut(SolicitudOut):
+    descripcion: str
+    conversacion: list[MensajeOut]
+    puede_responder: bool
+    encuesta: EncuestaPortalOut | None
+
+
+def _solicitud(db: Session, u: UsuarioApp, t: Ticket) -> dict:
+    staff = [r for r in t.respuestas if r.tipo_autor == "staff" and not r.es_interna]
+    pendiente = (t.encuesta is not None and t.encuesta.fecha_respuesta is None and t.estado in ("resuelto", "cerrado"))
+    return dict(numero=t.numero, asunto=t.asunto, categoria=t.categoria.nombre, estado=t.estado,
+                estado_texto=ESTADO_TICKET.get(t.estado, t.estado), fecha_creacion=t.fecha_creacion,
+                fecha_actualizacion=t.fecha_actualizacion,
+                solicitante=t.usuario.nombre if t.usuario else (t.nombre_solicitante or "—"),
+                es_mia=t.id_usuario == u.id_usuario, residente=t.paciente.nombre if t.paciente else None,
+                respuestas_soporte=len(staff), encuesta_pendiente=pendiente)
+
+
+def _ticket_visible(db: Session, u: UsuarioApp, numero: int) -> Ticket:
+    t = db.scalar(select(Ticket).where(Ticket.numero == numero))
+    if t is None or not portal.puede_ver_ticket(db, u, t):
+        raise ApiError(404, "NOT_FOUND", "La solicitud no existe o no es tuya.")
+    return t
+
+
+def _detalle(db: Session, u: UsuarioApp, t: Ticket) -> SolicitudDetalleOut:
+    from .soporte import respuesta_out
+    conv = [MensajeOut(autor=respuesta_out(r).autor_nombre if r.tipo_autor != "staff"
+                       else f"{r.autor.nombre_completo.split()[0] if r.autor else 'Soporte'} · Soporte AgeCare",
+                       de_soporte=r.tipo_autor == "staff", cuerpo=r.cuerpo, fecha=r.fecha)
+            for r in sorted(t.respuestas, key=lambda r: (r.fecha, r.id_respuesta))
+            if not r.es_interna and r.tipo_autor in ("staff", "usuario")]
+    e = t.encuesta
+    return SolicitudDetalleOut(**_solicitud(db, u, t), descripcion=t.descripcion, conversacion=conv,
+                               puede_responder=t.estado != "cerrado",
+                               encuesta=EncuestaPortalOut(puntaje=e.puntaje, comentario=e.comentario,
+                                                          fecha_respuesta=e.fecha_respuesta) if e else None)
+
+
+@router.get("/solicitudes", response_model=list[SolicitudOut],
+            summary="CU57 · Mis solicitudes (y las de mis residentes, si soy representante)")
+def mis_solicitudes(u: UsuarioApp = Depends(CUALQUIERA), db: Session = Depends(get_db)):
+    mios = portal.residentes_de(db, u)
+    cond = Ticket.id_usuario == u.id_usuario
+    if mios:
+        cond = or_(cond, Ticket.id_paciente.in_(mios))
+    rows = db.scalars(select(Ticket).where(cond).order_by(Ticket.fecha_actualizacion.desc()).limit(50)).unique().all()
+    return [SolicitudOut(**_solicitud(db, u, t)) for t in rows]
+
+
+@router.get("/solicitudes/{numero}", response_model=SolicitudDetalleOut, summary="CU57 · Ver una solicitud y su conversación")
+def ver_solicitud(numero: int, u: UsuarioApp = Depends(CUALQUIERA), db: Session = Depends(get_db)):
+    return _detalle(db, u, _ticket_visible(db, u, numero))
+
+
+class ResponderIn(BaseModel):
+    cuerpo: str = Field(min_length=2, max_length=2000)
+
+
+@router.post("/solicitudes/{numero}/respuestas", response_model=SolicitudDetalleOut, status_code=201,
+             summary="CU57 · Responder a soporte (reabre la solicitud si estaba resuelta)")
+def responder_solicitud(numero: int, data: ResponderIn, request: Request, u: UsuarioApp = Depends(CUALQUIERA),
+                        db: Session = Depends(get_db)):
+    from ..models import RespuestaTicket
+    t = _ticket_visible(db, u, numero)
+    if t.estado == "cerrado":
+        raise ApiError(409, "TICKET_CLOSED", "Esta solicitud está cerrada. Si necesitas algo más, crea una nueva.")
+    now = utcnow()
+    db.add(RespuestaTicket(id_ticket=t.id_ticket, tipo_autor="usuario", id_usuario_autor=u.id_usuario,
+                           cuerpo=data.cuerpo.strip(), fecha=now))
+    anterior = t.estado
+    if t.estado in ("resuelto", "esperando_usuario"):
+        t.estado = "en_curso"  # vuelve a la cola de soporte
+        t.fecha_resolucion = None
+    t.fecha_actualizacion = now
+    registrar(db, actor=None, accion="portal.responder_ticket", tipo_entidad="ticket", id_entidad=t.id_ticket,
+              antes={"estado": anterior}, despues={"estado": t.estado, "usuario": u.id_usuario}, request=request)
+    db.commit()
+    db.expire_all()
+    return _detalle(db, u, _ticket_visible(db, u, numero))
+
+
+class EncuestaIn(BaseModel):
+    puntaje: int = Field(ge=1, le=5)
+    comentario: str | None = Field(None, max_length=1000)
+
+
+@router.post("/solicitudes/{numero}/encuesta", response_model=SolicitudDetalleOut,
+             summary="CU40 · Calificar la atención (encuesta de satisfacción)")
+def responder_encuesta(numero: int, data: EncuestaIn, request: Request, u: UsuarioApp = Depends(CUALQUIERA),
+                       db: Session = Depends(get_db)):
+    t = _ticket_visible(db, u, numero)
+    e = t.encuesta
+    if e is None or t.estado not in ("resuelto", "cerrado"):
+        raise ApiError(409, "SURVEY_NOT_AVAILABLE", "La encuesta se habilita cuando soporte resuelve la solicitud.")
+    if e.fecha_respuesta is not None:
+        raise ApiError(409, "SURVEY_ANSWERED", "Ya calificaste esta atención. ¡Gracias!")
+    e.puntaje, e.comentario, e.fecha_respuesta = data.puntaje, (data.comentario or "").strip() or None, utcnow()
+    registrar(db, actor=None, accion="portal.encuesta", tipo_entidad="ticket", id_entidad=t.id_ticket,
+              despues={"puntaje": data.puntaje, "usuario": u.id_usuario}, request=request)
+    db.commit()
+    db.expire_all()
+    return _detalle(db, u, _ticket_visible(db, u, numero))

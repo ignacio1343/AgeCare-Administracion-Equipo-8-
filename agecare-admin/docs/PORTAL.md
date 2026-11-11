@@ -1,4 +1,4 @@
-# Portal web de familias (v0.6.2)
+# Portal web de familias (v0.7.0)
 
 Sitio web responsivo (computador y celular) en **`/portal`** del mismo dominio de la consola:
 <https://agecare-admin.onrender.com/portal>. Tiene tres vistas según el perfil de la cuenta. Una persona con más de
@@ -24,6 +24,32 @@ crea el ticket si la cuenta existe, y como máximo uno cada 24 horas por cuenta.
 **Usuarios de la app** → ficha → *Motivo* (p. ej. «Ticket #1047, identidad validada por teléfono») →
 **Restablecer contraseña**. La consola muestra una **clave temporal** una sola vez. El portal obliga a cambiarla al
 entrar y se cierran las sesiones anteriores.
+
+## Cómo ve el usuario la respuesta de soporte («Mis solicitudes», CU57)
+
+Cuando soporte responde un ticket desde la consola, el usuario lo ve en el portal:
+
+| Qué hace soporte en la consola | Qué recibe el usuario |
+|---|---|
+| **Enviar respuesta** (sin marcar «Nota interna») | Aviso en la **campana** («Soporte respondió la solicitud #1050») y un **correo** con el texto de la respuesta y el botón «Ver mi solicitud» |
+| Cambia el estado a **Esperando usuario** | Aviso «Soporte necesita tu respuesta» en la campana y por correo |
+| Cambia el estado a **Resuelto** | Aviso «Soporte resolvió» y la **encuesta de satisfacción** (1 a 5 estrellas y comentario) en la solicitud |
+| Escribe una **nota interna** | Nada: las notas internas nunca se muestran en el portal |
+
+En **📨 Mis solicitudes** (ícono de la cabecera o enlace del pie de página):
+
+- Cada persona ve **sus** solicitudes, con número, estado (Recibida, En atención, Espera tu respuesta, Resuelta,
+  Cerrada) y la **conversación** con soporte.
+- El **representante** ve además las solicitudes de **sus residentes**, marcadas «Solicitud de Rosa…», y puede
+  responder por ellos. En la consola su mensaje aparece como «Carolina … (representante)».
+- El usuario puede **responder**. Si la solicitud estaba *Resuelta* o *Esperando usuario*, vuelve a *En curso* en la
+  cola de soporte. Una solicitud *Cerrada* no admite más mensajes.
+- La **encuesta** se responde una sola vez y alimenta el indicador CSAT de soporte.
+- El correo de aviso llega **solo a quien hizo la solicitud**. Al representante del residente le llega el aviso en la
+  campana. Si el envío del correo falla, el aviso del portal igual queda guardado.
+
+La demo trae el ticket «Quiero inscribirme en el bingo» de Rosa ya respondido y resuelto, con la encuesta pendiente.
+Para verlo, entra al portal como `residente@agecare.cl` o `representante@agecare.cl`.
 
 ## Flujo del representante
 
@@ -217,6 +243,7 @@ uno de la lista de Meta, también llega el WhatsApp.
 | `GET /representante/residentes/{id}/estado` · `PUT /me/whatsapp` | CU50 estado en tiempo real · consentimiento |
 | `GET /notificaciones` · `POST /notificaciones/leer` | Avisos del portal |
 | `GET /residente/inicio` · `GET /contenidos?tipo=` · `POST /ayuda` | CU51 contenidos · CU52 pedir ayuda |
+| `GET /solicitudes` · `GET /solicitudes/{numero}` · `POST …/respuestas` · `POST …/encuesta` | CU57 Mis solicitudes · CU40 encuesta |
 | `GET /cuidador/residentes` · `POST /cuidador/residentes/{id}/ficha` · `GET …/historial` | CU53 ficha vital |
 
 Consola: `POST /usuarios` (CU54), `POST|DELETE /usuarios/{id}/residentes` (CU55),

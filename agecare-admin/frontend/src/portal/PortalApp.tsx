@@ -8,6 +8,7 @@ import Cuidador from './Cuidador'
 import { PasarelaSimulada, ResultadoPago } from './Pagos'
 import { Contratar, EstadoResidente, InicioRepresentante, NuevoResidente } from './Representante'
 import { Ayuda, InicioResidente } from './Residente'
+import { MisSolicitudes, VerSolicitud } from './Solicitudes'
 import './portal.css'
 
 const ETIQUETA: Record<Vista, string> = { representante: 'Representante', residente: 'Residente', cuidador: 'Cuidador' }
@@ -42,6 +43,7 @@ function Inicio() {
 }
 
 function Campana() {
+  const nav = useNavigate()
   const [abierta, setAbierta] = useState(false)
   const [items, setItems] = useState<Notificacion[]>([])
   const [sinLeer, setSinLeer] = useState(0)
@@ -69,8 +71,11 @@ function Campana() {
           <div className="p-avisos-head"><b>Avisos</b><button className="p-link" onClick={() => setAbierta(false)}>Cerrar</button></div>
           {items.length === 0 && <p className="p-muted">No tienes avisos.</p>}
           {items.map(n => (
-            <div key={n.id_notificacion} className={`p-aviso ${n.tipo}${n.leida ? '' : ' nueva'}`}>
-              <b>{n.titulo}</b><p>{n.cuerpo}</p><small>{new Date(n.fecha_creacion).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</small>
+            <div key={n.id_notificacion} className={`p-aviso ${n.tipo}${n.leida ? '' : ' nueva'}${n.enlace ? ' con-enlace' : ''}`}
+                 role={n.enlace ? 'link' : undefined} tabIndex={n.enlace ? 0 : undefined}
+                 onClick={() => { if (n.enlace) { setAbierta(false); nav(n.enlace) } }}
+                 onKeyDown={e => { if (n.enlace && e.key === 'Enter') { setAbierta(false); nav(n.enlace) } }}>
+              <b>{n.titulo}</b><p>{n.cuerpo}</p><small>{new Date(n.fecha_creacion).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}{n.enlace ? ' · Ver →' : ''}</small>
             </div>
           ))}
         </div>
@@ -94,13 +99,14 @@ function Marco() {
           </nav>
         )}
         <div className="p-spacer" />
+        <NavLink to="/portal/solicitudes" className="p-icono p-icono-link" title="Mis solicitudes" aria-label="Mis solicitudes">📨</NavLink>
         <Campana />
         <div className="p-quien"><b>{me.nombres ?? me.nombre}</b><small>{me.vistas.map(v => ETIQUETA[v]).join(' · ')}</small></div>
         <button className="p-btn ghost sm" onClick={cerrar}>Salir</button>
       </header>
       <main className="p-main"><Outlet /></main>
       <footer className="p-footer">
-        <Link to="/portal/ayuda">¿Necesitas ayuda?</Link> · AgeCare · Wellq Co
+        <Link to="/portal/ayuda">¿Necesitas ayuda?</Link> · <Link to="/portal/solicitudes">Mis solicitudes</Link> · AgeCare · Wellq Co
       </footer>
     </div>
   )
@@ -118,6 +124,8 @@ export default function PortalApp() {
         <Route element={<ConSesion><Marco /></ConSesion>}>
           <Route path="cambiar-clave" element={<Cambiar />} />
           <Route path="ayuda" element={<Ayuda />} />
+          <Route path="solicitudes" element={<MisSolicitudes />} />
+          <Route path="solicitudes/:numero" element={<VerSolicitud />} />
           <Route path="representante" element={<ConSesion vista="representante"><InicioRepresentante /></ConSesion>} />
           <Route path="representante/contratar" element={<ConSesion vista="representante"><Contratar /></ConSesion>} />
           <Route path="representante/plan/:id/residente" element={<ConSesion vista="representante"><NuevoResidente /></ConSesion>} />

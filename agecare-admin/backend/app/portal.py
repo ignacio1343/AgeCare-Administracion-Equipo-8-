@@ -218,3 +218,57 @@ def plan_activo(db: Session, codigo: str) -> Plan | None:
     p = db.get(Plan, codigo)
     return p if p and p.activo else None
 
+
+
+# ---------------------------------------------------------------- v0.7 · «Mis solicitudes» (tickets en el portal)
+def residentes_de(db: Session, u: UsuarioApp) -> list[int]:
+    """Residentes de los que el usuario es representante (membresía familiar activa)."""
+    return list(db.scalars(select(MembresiaCirculo.id_paciente).where(
+        MembresiaCirculo.id_usuario == u.id_usuario, MembresiaCirculo.rol_en_circulo == "familiar",
+        MembresiaCirculo.estado == "activo")))
+
+
+def puede_ver_ticket(db: Session, u: UsuarioApp, t: Ticket) -> bool:
+    return t.id_usuario == u.id_usuario or (t.id_paciente is not None and t.id_paciente in residentes_de(db, u))
+
+
+TITULOS_TICKET = {"respuesta": "Soporte respondió", "resuelto": "Soporte resolvió",
+                  "esperando_usuario": "Soporte necesita tu respuesta"}
+
+
+def avisar_ticket(db: Session, t: Ticket, tipo: str, texto: str) -> list[dict]:
+    """Aviso en la campana del solicitante y de los representantes del residente. Devuelve los correos por enviar
+    (solo al solicitante), que el llamador envía en segundo plano."""
+    titulo = TITULOS_TICKET[tipo]
+    enlace = f"/portal/solicitudes/{t.numero}"
+    destinatarios = {}
+    if t.usuario is not None and t.usuario.estado_cuenta == "activa":
+        destinatarios[t.usuario.id_usuario] = t.usuario
+    if t.id_paciente is not None:
+        for rep in representantes_de(db, t.id_paciente):
+            destinatarios.setdefault(rep.id_usuario, rep)
+    for uid, u in destinatarios.items():
+        de_quien = "" if uid == t.id_usuario else f" de {t.usuario.nombre if t.usuario else 'tu residente'}"
+        n = notificar(db, uid, "soporte", f"{titulo} la solicitud #{t.numero}{de_quien}",
+                      f"«{t.asunto}»: {texto[:300]}", t.id_paciente)
+        n.enlace = enlace
+    correos = []
+    if t.usuario is not None and t.usuario.estado_cuenta == "activa" and t.usuario.email:
+        correos.append({"email": t.usuario.email, "nombre": t.usuario.nombres or t.usuario.nombre, "numero": t.numero,
+                        "asunto_ticket": t.asunto, "titulo": titulo, "texto": texto, "enlace": enlace})
+    return correos
+
+
+def enviar_correos_ticket(correos: list[dict]) -> None:
+    """Tarea en segundo plano: si el correo falla, el aviso en el portal ya quedó guardado."""
+    import logging
+
+    from . import correo
+    from .config import get_settings
+    base = get_settings().frontend_url.rstrip("/")
+    for c in correos:
+        try:
+            correo.enviar_aviso_ticket(c["email"], c["nombre"], c["numero"], c["asunto_ticket"], c["titulo"],
+                                       c["texto"], base + c["enlace"])
+        except correo.ErrorCorreo as e:
+            logging.getLogger("correo").warning("aviso del ticket #%s no enviado: %s", c["numero"], e)

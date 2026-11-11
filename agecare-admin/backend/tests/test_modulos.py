@@ -224,7 +224,7 @@ def test_versiones_legales(client, auth):
 
 def test_health_y_health_db(client):
     r = client.get(f"{API}/health")
-    assert r.status_code == 200 and r.json()["version"] == "0.6.2"
+    assert r.status_code == 200 and r.json()["version"] == "0.7.0"
     r = client.get(f"{API}/health/db")
     assert r.status_code == 200 and r.json()["db_ms"] >= 0
 

@@ -1,6 +1,6 @@
 # Base de datos · AgeCare Administración
 
-PostgreSQL 16 · 48 tablas (más `alembic_version`) · versión del esquema `0005_correo` (v0.6.1).
+PostgreSQL 16 · 48 tablas (más `alembic_version`) · versión del esquema `0006_solicitudes` (v0.7.0).
 Los datos son ficticios (datos de demostración); no contienen información real de pacientes.
 
 ## Contenido
@@ -10,7 +10,7 @@ Los datos son ficticios (datos de demostración); no contienen información real
 | `01_esquema_agecare_admin_postgresql.sql` | Esquema completo: tablas, claves primarias y foráneas, restricciones CHECK y UNIQUE, índices y secuencias. |
 | `02_datos_demo_agecare_admin.sql` | Datos de demostración como sentencias INSERT (staff, usuarios, tickets, métricas, planes, etc.). |
 | `agecare_admin_completo.dump` | Respaldo completo (esquema + datos) en formato `pg_dump -Fc`. |
-| `03_Diccionario_de_datos_AgeCare_Admin.xlsx` | Diccionario: 48 tablas con su módulo y descripción, 411 columnas con tipo, nulos y claves, y 33 restricciones CHECK. |
+| `03_Diccionario_de_datos_AgeCare_Admin.xlsx` | Diccionario: 48 tablas con su módulo y descripción, 413 columnas con tipo, nulos y claves, y 33 restricciones CHECK. |
 
 ## Cómo restaurarla
 

@@ -41,7 +41,7 @@ Haz commit y push; Render aplica el cambio cuando el CI pase.
 
 | Prueba | Cómo | Resultado esperado |
 |---|---|---|
-| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.6.2"}` |
+| Health de la API | Abrir `https://agecare-admin-api.onrender.com/api/v1/health` | `{"status":"ok","version":"0.7.0"}` |
 | Base de datos | Abrir `https://agecare-admin-api.onrender.com/api/v1/health/db` | `{"status":"ok","db_ms":...}` |
 | Rewrite /api | Abrir `https://agecare-admin.onrender.com/api/v1/health` | La misma respuesta que la API |
 | Login | Abrir la consola e ingresar con `soporte@wellq.co.uk` / `Soporte123!` | Entra a Soporte |

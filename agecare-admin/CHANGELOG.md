@@ -1,5 +1,21 @@
 # Cambios
 
+## v0.7.0 · 10/11/2026 · «Mis solicitudes»: el usuario ve la respuesta de soporte
+
+- Nueva sección **📨 Mis solicitudes** en el portal, para las tres vistas.
+  - Muestra la lista de tickets con su estado y la conversación con soporte. Las notas internas no se muestran.
+  - El usuario puede responder desde ahí. Si la solicitud estaba resuelta, vuelve a la cola.
+- El **representante** ve y responde las solicitudes de sus residentes.
+- Cuando soporte responde, deja la solicitud *esperando usuario* o la resuelve:
+  - aviso en la **campana** del portal, con enlace a la solicitud;
+  - **correo real** al solicitante, desde el Gmail del equipo.
+- La **encuesta de satisfacción es real**: 1 a 5 estrellas en el portal, y alimenta el CSAT de los indicadores.
+- Migración `0006_solicitudes`:
+  - `respuesta_ticket.id_usuario_autor` (quién respondió desde el portal);
+  - `notificacion_app.enlace`;
+  - nuevo tipo de aviso `soporte`.
+- 121 pruebas automáticas.
+
 ## v0.6.2 · 04/11/2026 · Correo del registro desde el Gmail del equipo
 
 - El código del registro se envía con un **Google Apps Script** publicado en el Gmail del equipo

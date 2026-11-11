@@ -779,3 +779,85 @@ def test_apps_script_errores(client, monkeypatch):
         _apps_script(monkeypatch, **kw)
         r = client.post(f"{P}/registro", json=_datos())
         assert r.status_code == 502 and texto in r.json()["error"]["message"], r.text
+
+
+# ---------------------------------------------------------------- «Mis solicitudes» (CU57) y encuesta (CU40)
+def test_solicitudes_conversacion_avisos_y_encuesta(client, auth, monkeypatch):
+    h, sid, pid = _familia(client)                      # Carla (representante) con Hilda (residente)
+    enviados = _apps_script(monkeypatch)
+    hr, _ = _login(client, RUT_RES, "Hilda2026")
+    n = client.post(f"{P}/ayuda", headers=hr, json={"categoria": "otros", "asunto": "No puedo ver los chistes",
+                                                    "descripcion": "Estoy triste porque no veo los chistes."}).json()["numero"]
+    assert "Mis solicitudes" in client.post(f"{P}/ayuda", headers=h, json={
+        "asunto": "Consulta del plan", "descripcion": "¿Cuándo se renueva el plan?"}).json()["mensaje"]
+    # El residente ve solo las suyas; la representante ve las suyas y las de su residente
+    assert [s["numero"] for s in client.get(f"{P}/solicitudes", headers=hr).json()] == [n]
+    rep = client.get(f"{P}/solicitudes", headers=h).json()
+    assert len(rep) == 2 and {s["es_mia"] for s in rep} == {True, False}
+    ajena = next(s for s in rep if not s["es_mia"])
+    assert ajena["solicitante"] == "Hilda Pérez Soto" and ajena["residente"] == "Hilda Pérez Soto"
+    # Soporte responde (y deja una nota interna que el usuario no ve)
+    hs = auth("soporte")
+    client.post(f"{API}/soporte/tickets/%23{n}/respuestas", headers=hs, json={"cuerpo": "Revisamos tu cuenta, ya puedes verlos.",
+                                                                       "es_interna": False})
+    client.post(f"{API}/soporte/tickets/%23{n}/respuestas", headers=hs, json={"cuerpo": "Nota solo para el equipo",
+                                                                       "es_interna": True})
+    d = client.get(f"{P}/solicitudes/{n}", headers=hr).json()
+    assert [m["de_soporte"] for m in d["conversacion"]] == [True] and "Soporte AgeCare" in d["conversacion"][0]["autor"]
+    assert "Nota solo" not in str(d)
+    # Avisos: campana del residente y de la representante (con enlace) y correo solo al residente
+    nr = client.get(f"{P}/notificaciones", headers=hr).json()["items"][0]
+    assert nr["tipo"] == "soporte" and nr["enlace"] == f"/portal/solicitudes/{n}" and "respondió" in nr["titulo"]
+    assert "de Hilda" in client.get(f"{P}/notificaciones", headers=h).json()["items"][0]["titulo"]
+    correos = [c for _, c in enviados if "solicitud" in c["asunto"]]
+    assert len(correos) == 1 and correos[0]["para"] == "hilda@example.com" and "ya puedes verlos" in correos[0]["html"]
+    assert f"/portal/solicitudes/{n}" in correos[0]["html"]
+    # La representante responde por su residente: queda con su nombre
+    d = client.post(f"{P}/solicitudes/{n}/respuestas", headers=h, json={"cuerpo": "Gracias, ya le funciona."}).json()
+    assert d["conversacion"][-1]["autor"] == "Carla Rojas Vidal (representante)"
+    conv = client.get(f"{API}/soporte/tickets/%23{n}/respuestas", headers=hs).json()
+    assert conv[-1]["autor_nombre"] == "Carla Rojas Vidal (representante)" and conv[-1]["tipo_autor"] == "usuario"
+    # Resolver: aviso y encuesta; responder después de resuelto reabre
+    for estado in ("en_curso", "resuelto"):
+        client.patch(f"{API}/soporte/tickets/%23{n}", headers=hs, json={"estado": estado})
+    d = client.get(f"{P}/solicitudes/{n}", headers=hr).json()
+    assert d["estado_texto"] == "Resuelta" and d["encuesta_pendiente"]
+    assert any("resolvió" in c["asunto"] or "resolvió" in c["html"] for _, c in enviados)
+    assert client.post(f"{P}/solicitudes/{n}/encuesta", headers=hr, json={"puntaje": 6}).status_code == 422
+    d = client.post(f"{P}/solicitudes/{n}/encuesta", headers=hr, json={"puntaje": 5, "comentario": "¡Muy amables!"}).json()
+    assert d["encuesta"]["puntaje"] == 5 and not d["encuesta_pendiente"]
+    assert client.post(f"{P}/solicitudes/{n}/encuesta", headers=hr, json={"puntaje": 4}).status_code == 409
+    ind = client.get(f"{API}/soporte/indicadores", headers=hs).json()
+    assert ind["csat_promedio"] == 5.0 and ind["csat_respuestas"] == 1
+    d = client.post(f"{P}/solicitudes/{n}/respuestas", headers=hr, json={"cuerpo": "Otra vez no veo nada"}).json()
+    assert d["estado"] == "en_curso"
+    # Esperando al usuario: aviso; cerrado: no admite respuestas
+    client.patch(f"{API}/soporte/tickets/%23{n}", headers=hs, json={"estado": "esperando_usuario"})
+    assert "necesita tu respuesta" in client.get(f"{P}/notificaciones", headers=hr).json()["items"][0]["titulo"]
+    for estado in ("en_curso", "resuelto", "cerrado"):
+        client.patch(f"{API}/soporte/tickets/%23{n}", headers=hs, json={"estado": estado})
+    assert client.post(f"{P}/solicitudes/{n}/respuestas", headers=hr, json={"cuerpo": "hola"}).status_code == 409
+    assert not client.get(f"{P}/solicitudes/{n}", headers=hr).json()["puede_responder"]
+
+
+def test_solicitudes_ajenas_y_encuesta_antes_de_resolver(client, auth):
+    h, sid, pid = _familia(client)
+    hr, _ = _login(client, RUT_RES, "Hilda2026")
+    n = client.post(f"{P}/ayuda", headers=hr, json={"asunto": "Consulta uno", "descripcion": "Necesito ayuda con algo."}).json()["numero"]
+    assert client.post(f"{P}/solicitudes/{n}/encuesta", headers=hr, json={"puntaje": 3}).status_code == 409
+    otro = _registrar(client, email="otro@example.com", rut=_rut_valido(13131313))
+    assert client.get(f"{P}/solicitudes/{n}", headers=otro).status_code == 404
+    assert client.post(f"{P}/solicitudes/{n}/respuestas", headers=otro, json={"cuerpo": "hola"}).status_code == 404
+    assert client.get(f"{P}/solicitudes", headers=otro).json() == []
+    assert client.get(f"{P}/solicitudes/999999", headers=hr).status_code == 404
+
+
+def test_aviso_de_correo_fallido_no_rompe_la_respuesta(client, auth, monkeypatch):
+    import urllib.error
+    h, sid, pid = _familia(client)
+    hr, _ = _login(client, RUT_RES, "Hilda2026")
+    n = client.post(f"{P}/ayuda", headers=hr, json={"asunto": "Consulta dos", "descripcion": "Necesito ayuda con algo."}).json()["numero"]
+    _apps_script(monkeypatch, error=urllib.error.URLError("sin red"))
+    r = client.post(f"{API}/soporte/tickets/%23{n}/respuestas", headers=auth("soporte"), json={"cuerpo": "Hola, te ayudamos."})
+    assert r.status_code == 201
+    assert client.get(f"{P}/notificaciones", headers=hr).json()["items"][0]["tipo"] == "soporte"

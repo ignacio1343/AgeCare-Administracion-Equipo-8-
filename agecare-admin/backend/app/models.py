@@ -243,6 +243,8 @@ class RespuestaTicket(Base):
     id_respuesta: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     id_ticket: Mapped[int] = mapped_column(ForeignKey("ticket.id_ticket"), index=True)
     id_staff_autor: Mapped[int | None] = mapped_column(ForeignKey("miembro_staff.id_staff"))
+    # v0.7: quién respondió desde el portal (el residente o su representante)
+    id_usuario_autor: Mapped[int | None] = mapped_column(ForeignKey("usuario_app.id_usuario"))
     cuerpo: Mapped[str] = mapped_column(Text)
     tipo_autor: Mapped[str] = mapped_column(String(30))
     es_interna: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -252,6 +254,7 @@ class RespuestaTicket(Base):
 
     ticket: Mapped[Ticket] = relationship(back_populates="respuestas")
     autor: Mapped[MiembroStaff | None] = relationship(lazy="joined")
+    autor_usuario: Mapped[UsuarioApp | None] = relationship(lazy="joined")
 
 
 class EncuestaSatisfaccion(Base):
@@ -810,8 +813,10 @@ class NotificacionApp(Base):
     cuerpo: Mapped[str] = mapped_column(String(1000))
     fecha_creacion: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
     fecha_lectura: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    enlace: Mapped[str | None] = mapped_column(String(200))  # pantalla del portal que abre el aviso
     __table_args__ = (
-        CheckConstraint("tipo IN ('estado_riesgoso', 'alerta_salud', 'pago', 'plan', 'sistema')", name="ck_notificacion_tipo"),
+        CheckConstraint("tipo IN ('estado_riesgoso', 'alerta_salud', 'pago', 'plan', 'sistema', 'soporte')",
+                        name="ck_notificacion_tipo"),
     )
 
 

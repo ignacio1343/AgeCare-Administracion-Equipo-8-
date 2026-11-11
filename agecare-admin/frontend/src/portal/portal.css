@@ -203,6 +203,33 @@
 .p-semaforo label.ok.sel { border-color: var(--p-ok); background: var(--p-ok-bg) } .p-semaforo label.warn.sel { border-color: #d39b16; background: var(--p-warn-bg) }
 .p-semaforo label.crit.sel { border-color: var(--p-crit); background: var(--p-crit-bg) }
 
+/* ---------- mis solicitudes */
+.p-icono-link { display: grid; place-items: center; text-decoration: none } .p-icono-link.active { border-color: var(--p-brand); background: var(--p-brand-soft) }
+.p-aviso.con-enlace { cursor: pointer } .p-aviso.con-enlace:hover { filter: brightness(.97) }
+.p-aviso.soporte { background: var(--p-brand-soft) }
+.p-chip-gris { background: #f1efea; color: var(--p-soft) }
+.p-solicitudes { display: flex; flex-direction: column; gap: 10px }
+.p-solicitud { background: #fff; border: 1px solid var(--p-line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+  color: inherit; text-decoration: none; box-shadow: var(--p-shadow) }
+.p-solicitud:hover { border-color: #b9c9ec } .p-solicitud.destacada { box-shadow: inset 4px 0 0 var(--p-accent), var(--p-shadow) }
+.p-solicitud b { font-size: 17px } .p-solicitud small { color: var(--p-faint) }
+.p-sol-head { display: flex; justify-content: space-between; align-items: center }
+.p-sol-resp { color: var(--p-brand-ink) !important; font-weight: 600 } .p-sol-aviso { color: #9a4a22 !important; font-weight: 700 }
+.p-volver.arriba { margin: 0 0 10px }
+.p-chat { list-style: none; display: flex; flex-direction: column; gap: 12px }
+.p-chat li { display: flex } .p-chat li.soporte { justify-content: flex-start } .p-chat li.yo { justify-content: flex-end }
+.p-burbuja { max-width: min(560px, 88%); border-radius: 16px; padding: 10px 14px; background: var(--p-bg); border: 1px solid var(--p-line) }
+.p-chat li.soporte .p-burbuja { background: var(--p-brand-soft); border-color: #cbd9f4; border-bottom-left-radius: 4px }
+.p-chat li.yo .p-burbuja { border-bottom-right-radius: 4px }
+.p-burbuja b { font-size: 14px } .p-burbuja p { margin: 4px 0; white-space: pre-wrap; font-size: 16px } .p-burbuja small { color: var(--p-faint) }
+.p-chat-espera { justify-content: center; color: var(--p-faint); font-size: 14px }
+.p-responder { margin-top: 16px; border-top: 1px solid var(--p-line); padding-top: 14px }
+.p-encuesta { border-color: #f0dca8; background: #fffaf0 } .p-encuesta .p-btn { margin-top: 10px }
+.p-estrellas { display: flex; gap: 6px; margin: 10px 0 }
+.p-estrellas button { font-size: 38px; line-height: 1; background: none; border: none; color: #d6d0c4; cursor: pointer; padding: 2px }
+.p-estrellas button.on { color: #f2b01e }
+.p-input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid #d6d0c4; border-radius: 12px; width: 100% }
+
 /* ---------- celular */
 @media (max-width: 720px) {
   .p-header { padding: 8px 12px; gap: 8px; flex-wrap: wrap }
@@ -210,6 +237,7 @@
   .p-vistas { order: 5; flex: 1 1 100% }
   .p-vistas a { flex: 1; text-align: center }
   .p-main { padding: 16px 14px 40px }
+  .p-avisos { position: fixed; left: 12px; right: 12px; top: 64px; width: auto }
   .p-shell h1 { font-size: 23px }
   .p-grid2 { grid-template-columns: 1fr }
   .p-acceso { padding: 16px 12px }

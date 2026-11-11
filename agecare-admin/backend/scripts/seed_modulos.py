@@ -266,6 +266,7 @@ def cargar(db, rnd: random.Random | None = None) -> list[str]:
                         m.estado, m.fecha_lectura = "leido", m.fecha_entrega + timedelta(minutes=rnd.uniform(.5, 25))
         hechos.append(f"{n} avisos por WhatsApp a familiares")
     hechos += cargar_portal(db, now)
+    hechos += demo_solicitudes(db, now)
     db.commit()
     return hechos
 
@@ -479,3 +480,34 @@ def sincronizar_comercial(db, rnd, now) -> list[str]:
             c.nombre, c.rut = c.titular.nombre, c.titular.rut or c.rut
     db.flush()
     return hechos
+
+
+# ---------------------------------------------------------------- v0.7 · respuesta de soporte visible en el portal
+def demo_solicitudes(db, now) -> list[str]:
+    """El ticket demo del bingo queda respondido y resuelto, con la encuesta pendiente: así «Mis solicitudes» del
+    residente y de su representante muestran la conversación. Se aplica una sola vez."""
+    from app.models import EncuestaSatisfaccion, MiembroStaff, NotificacionApp, RespuestaTicket, Ticket
+    t = db.scalar(select(Ticket).where(Ticket.asunto == "Quiero inscribirme en el bingo", Ticket.canal == "app"))
+    if t is None or any(r.tipo_autor == "staff" for r in t.respuestas):
+        return []
+    sofia = db.scalar(select(MiembroStaff).where(MiembroStaff.email == "soporte@wellq.co.uk"))
+    if sofia is None:
+        return []
+    cuando = t.fecha_creacion + timedelta(minutes=40)
+    db.add(RespuestaTicket(id_ticket=t.id_ticket, id_staff_autor=sofia.id_staff, tipo_autor="staff", fecha=cuando,
+                           cuerpo="¡Hola, Rosa! Ya quedaste inscrita en el bingo solidario. Solo lleva tus lentes; "
+                                  "el cartón te lo entregamos en el comedor. ¡Que tengas suerte!"))
+    t.estado, t.id_staff_asignado = "resuelto", sofia.id_staff
+    t.fecha_primera_respuesta, t.fecha_resolucion, t.fecha_actualizacion = cuando, cuando, cuando
+    db.add(EncuestaSatisfaccion(id_ticket=t.id_ticket, fecha_envio=cuando))
+    db.add(RespuestaTicket(id_ticket=t.id_ticket, tipo_autor="sistema", es_interna=True, fecha=cuando,
+                           cuerpo="Se envió la encuesta de satisfacción al usuario (portal → Mis solicitudes)."))
+    from app.portal import representantes_de
+    reps = [u.id_usuario for u in representantes_de(db, t.id_paciente)] if t.id_paciente else []
+    for uid in dict.fromkeys([t.id_usuario, *reps]):
+        db.add(NotificacionApp(id_usuario=uid, id_paciente=t.id_paciente, tipo="soporte", fecha_creacion=cuando,
+                               titulo=f"Soporte resolvió la solicitud #{t.numero}" + ("" if uid == t.id_usuario else " de Rosa"),
+                               cuerpo=f"«{t.asunto}»: ya quedaste inscrita en el bingo solidario.",
+                               enlace=f"/portal/solicitudes/{t.numero}"))
+    db.flush()
+    return ["respuesta de soporte en «Mis solicitudes»"]

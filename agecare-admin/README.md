@@ -1,4 +1,4 @@
-# AgeCare · Consola de Administración y Portal de familias — v0.6.2
+# AgeCare · Consola de Administración y Portal de familias — v0.7.0
 
 Portal web interno para que el equipo de Wellq Co opere la plataforma AgeCare. Este repositorio contiene el
 **Avance 2** comprometido en la Guía Fase 1 (seguridad, staff, auditoría y soporte) **y los módulos de los
@@ -156,6 +156,8 @@ Sitio responsivo para celular y computador, en <https://agecare-admin.onrender.c
 - **Residente**: entra con correo o RUT y ve los chistes, noticias y **eventos** que publica el equipo.
 - **Cuidador**: registra la ficha vital (**Normal / Alerta / Riesgoso** con observación).
 - Los botones **«¿Olvidaste tu contraseña?»** y **«Pedir ayuda»** crean tickets con canal *App* en *Soporte*.
+  Las respuestas de soporte se ven en **Mis solicitudes** del portal (el representante también ve las de sus
+  residentes) y llegan como aviso y por correo; al resolver, el usuario califica la atención.
 - Admin y soporte crean representantes, cuidadores y residentes en *Usuarios de la app* y les asignan residentes.
 
 Guía completa, cuentas demo, tarjetas de prueba de Webpay y configuración del correo: [`docs/PORTAL.md`](docs/PORTAL.md).

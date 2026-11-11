@@ -107,7 +107,7 @@ export interface ItemResidente {
   puede_gestionar: boolean; residente: Residente | null; puede_ver_estado: boolean; recibe_avisos: boolean
   ultimo_estado: RegistroVital | null
 }
-export interface Notificacion { id_notificacion: number; tipo: string; titulo: string; cuerpo: string; id_paciente: number | null; fecha_creacion: string; leida: boolean }
+export interface Notificacion { id_notificacion: number; tipo: string; titulo: string; cuerpo: string; id_paciente: number | null; fecha_creacion: string; leida: boolean; enlace?: string | null }
 export interface Orden {
   orden_compra: string; estado: string; tipo: string; plan: string; monto: number; proveedor: string
   fecha_creacion: string; fecha_confirmacion: string | null; codigo_autorizacion: string | null; tarjeta: string | null

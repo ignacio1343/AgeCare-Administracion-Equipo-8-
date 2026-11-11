@@ -78,7 +78,7 @@ export default function TicketDetalle() {
             {escribe && !cerrado && (
               <form onSubmit={responder} className="reply">
                 <textarea rows={4} value={cuerpo} onChange={e => setCuerpo(e.target.value)} maxLength={8000}
-                  placeholder={interna ? 'Nota interna para el equipo…' : 'Respuesta para el usuario (se le notifica por correo y push)…'} aria-label="Mensaje" />
+                  placeholder={interna ? 'Nota interna para el equipo…' : 'Respuesta para el usuario (se le avisa en el portal y por correo)…'} aria-label="Mensaje" />
                 <div className="reply-bar">
                   <label className="toggle"><input type="checkbox" checked={interna} onChange={e => setInterna(e.target.checked)} /> Nota interna</label>
                   <button className="btn primary" disabled={!cuerpo.trim() || ocupado}>{interna ? 'Guardar nota' : 'Enviar respuesta'}</button>
